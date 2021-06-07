@@ -235,7 +235,7 @@ class MCP23017(threading.Thread):
             value = self[globals()[register + "B"]] & 0xFF
             self._cache[register] = self._cache[register] & 0x00FF | (value << 8)
 
-        return bool(value & (1 << bit))
+        return bool(self._cache[register] & (1 << bit))
 
     def _set_register_value(self, register, bit, value):
         """Set MCP23017 {bit} of {register} to {value}."""

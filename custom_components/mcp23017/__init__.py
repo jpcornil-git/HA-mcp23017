@@ -363,7 +363,6 @@ class MCP23017(threading.Thread):
                         self._entities[pin], "push_update"
                     ):
                         self._entities[pin].push_update(bool(input_state & 0x1))
-                        self._update_bitmap &= ~(1 << pin) & 0xFFFF
                     input_state >>= 1
                     self._update_bitmap >>= 1
 

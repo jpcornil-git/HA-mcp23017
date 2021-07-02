@@ -19,7 +19,7 @@ Improved MCP23017 implementation for Home Assistant
 
 1. Add https://github.com/jpcornil-git/HA-mcp23017 to your [custom repositories](https://hacs.xyz/docs/faq/custom_repositories/)
 
-### Update custome_components folder
+### Update custom_components folder
 
 1. Clone or download all files from this repository 
 2. Move custom_components/mcp23017 to your <ha_configuration_folder>, e.g. /home/homeassistant/.homeassistant/custom_components/mcp23017

@@ -69,7 +69,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
 
 async def async_unload_entry(hass, config_entry):
     """Unload MCP23017 switch entry corresponding to config_entry."""
-    print("FIXME ?")
+    _LOGGER.warning("[FIXME] async_unload_entry not implemented")
 
 
 class MCP23017Switch(ToggleEntity):
@@ -84,8 +84,13 @@ class MCP23017Switch(ToggleEntity):
         self._pin_name = config_entry.data[CONF_FLOW_PIN_NAME]
         self._pin_number = config_entry.data[CONF_FLOW_PIN_NUMBER]
 
+        # Get invert_logic from config flow (options) or import (data)
         self._invert_logic = config_entry.options.get(
-            CONF_INVERT_LOGIC, DEFAULT_INVERT_LOGIC
+            CONF_INVERT_LOGIC,
+            config_entry.data.get(
+                CONF_INVERT_LOGIC,
+                DEFAULT_INVERT_LOGIC
+            )
         )
 
         # Create or update option values for switch platform
@@ -182,7 +187,7 @@ class MCP23017Switch(ToggleEntity):
     async def async_config_update(self, hass, config_entry):
         """Handle update from config entry options."""
         self._invert_logic = config_entry.options[CONF_INVERT_LOGIC]
-        await self.hass.async_add_executor_job(
+        await hass.async_add_executor_job(
             functools.partial(
                 self._device.set_pin_value,
                 self._pin_number,
@@ -204,7 +209,7 @@ class MCP23017Switch(ToggleEntity):
 
         Return True when successful.
         """
-        if self._device:
+        if self.device:
             # Configure entity as output for a switch
             self._device.set_input(self._pin_number, False)
             self._state = self._device.get_pin_value(self._pin_number)

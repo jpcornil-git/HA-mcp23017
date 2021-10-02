@@ -112,7 +112,8 @@ async def async_unload_entry(hass, config_entry):
 
             # Free component if not linked to any entities
             if component.has_no_entities:
-                await hass.async_add_executor_job(component.stop_polling)
+                if component.is_alive():
+                    await hass.async_add_executor_job(component.stop_polling)
                 hass.data[DOMAIN].pop(i2c_address)
 
                 _LOGGER.info(

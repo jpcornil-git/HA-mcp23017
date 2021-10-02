@@ -25,10 +25,12 @@ Improved MCP23017 implementation for Home Assistant
 2. Move custom_components/mcp23017 to your <ha_configuration_folder>, e.g. /home/homeassistant/.homeassistant/custom_components/mcp23017
 3. Restart HA and clear browser cache (or restart a browser); latter is required for new config_flow to show up
 4. Add mcp23017 component using:
-- **config flow** (Configuration->Integrations->Add integration)
-  - Created entities will be visible in the **Integrations** tab and aggregated per device (i2c address) in the **Devices** tab. Entity options (invert logic, pull-up, ...) can be adapted using the entity's **Options** button once created.
-- **configuration.yaml** see configuration example below.
-  - Syntax is compatible with the legacy implementation described in https://www.home-assistant.io/integrations/mcp23017/
+   - **config flow** (Configuration->Integrations->Add integration)
+     - Created entities will be visible in the **Integrations** tab and aggregated per device (i2c address) in the **Devices** tab.
+     - Entity parameters (invert logic, pull-up, ...) can be adapted using the entity's **Options** button once created.
+   - **configuration.yaml** see configuration example below.
+     - Syntax is compatible with the legacy implementation described in https://www.home-assistant.io/integrations/mcp23017/
+     - Entity parameters (invert logic, pull-up, ...) can only be set globally for all pins of a device/integration.
 
 ## Example entry for `configuration.yaml`:
 

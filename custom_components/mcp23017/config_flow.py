@@ -29,6 +29,21 @@ class Mcp23017ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     VERSION = 1
     CONNECTION_CLASS = config_entries.CONN_CLASS_LOCAL_PUSH
 
+    def _title(self, user_input):
+        return "0x%02x:pin %d ('%s':%s)" % (
+            user_input[CONF_I2C_ADDRESS],
+            user_input[CONF_FLOW_PIN_NUMBER],
+            user_input[CONF_FLOW_PIN_NAME],
+            user_input[CONF_FLOW_PLATFORM],
+        )
+
+    def _unique_id(self, user_input):
+        return "%s.%d.%d" % (
+            DOMAIN,
+            user_input[CONF_I2C_ADDRESS],
+            user_input[CONF_FLOW_PIN_NUMBER],
+        )
+
     @staticmethod
     @callback
     def async_get_options_flow(config_entry):
@@ -37,15 +52,23 @@ class Mcp23017ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     async def async_step_import(self, user_input=None):
         """Create a new entity from configuration.yaml import."""
-        return await self.async_step_user(user_input)
+
+        config_entry =  await self.async_set_unique_id(self._unique_id(user_input))
+        # Remove entry (from storage) matching the same unique id
+        if config_entry:
+            self.hass.config_entries.async_remove(config_entry.entry_id)
+
+        return self.async_create_entry(
+            title=self._title(user_input),
+            data=user_input,
+        )
+
 
     async def async_step_user(self, user_input=None):
         """Create a new entity from UI."""
 
         if user_input is not None:
-            await self.async_set_unique_id(
-                f"{DOMAIN}.{user_input[CONF_I2C_ADDRESS]}.{user_input[CONF_FLOW_PIN_NUMBER]}"
-            )
+            await self.async_set_unique_id(self._unique_id(user_input))
             self._abort_if_unique_id_configured()
 
             if CONF_FLOW_PIN_NAME not in user_input:
@@ -55,13 +78,7 @@ class Mcp23017ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 )
 
             return self.async_create_entry(
-                title="0x%02x:pin %d ('%s':%s)"
-                % (
-                    user_input[CONF_I2C_ADDRESS],
-                    user_input[CONF_FLOW_PIN_NUMBER],
-                    user_input[CONF_FLOW_PIN_NAME],
-                    user_input[CONF_FLOW_PLATFORM],
-                ),
+                title=self._title(user_input),
                 data=user_input,
             )
 

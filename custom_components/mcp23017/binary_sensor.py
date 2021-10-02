@@ -77,8 +77,8 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
 
 
 async def async_unload_entry(hass, config_entry):
-    """Unload MCP23017 switch entry corresponding to config_entry."""
-    print("FIXME ?")
+    """Unload MCP23017 binary_sensor entry corresponding to config_entry."""
+    _LOGGER.warning("[FIXME] async_unload_entry not implemented")
 
 
 class MCP23017BinarySensor(BinarySensorEntity):
@@ -93,10 +93,22 @@ class MCP23017BinarySensor(BinarySensorEntity):
         self._pin_name = config_entry.data[CONF_FLOW_PIN_NAME]
         self._pin_number = config_entry.data[CONF_FLOW_PIN_NUMBER]
 
+        # Get invert_logic from config flow (options) or import (data)
         self._invert_logic = config_entry.options.get(
-            CONF_INVERT_LOGIC, DEFAULT_INVERT_LOGIC
+            CONF_INVERT_LOGIC,
+            config_entry.data.get(
+                CONF_INVERT_LOGIC,
+                DEFAULT_INVERT_LOGIC
+            )
         )
-        self._pull_mode = config_entry.data.get(CONF_PULL_MODE, DEFAULT_PULL_MODE)
+        # Get pull_mode from config flow (options) or import (data)
+        self._pull_mode = config_entry.options.get(
+            CONF_PULL_MODE,
+            config_entry.data.get(
+                CONF_PULL_MODE,
+                DEFAULT_PULL_MODE
+            )
+        )
 
         # Create or update option values for binary_sensor platform
         hass.config_entries.async_update_entry(
@@ -212,7 +224,7 @@ class MCP23017BinarySensor(BinarySensorEntity):
 
         Return True when successful.
         """
-        if self._device:
+        if self.device:
             # Configure entity as input for a binary sensor
             self._device.set_input(self._pin_number, True)
             self._device.set_pullup(self._pin_number, bool(self._pull_mode == MODE_UP))

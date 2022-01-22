@@ -7,6 +7,7 @@ import logging
 import voluptuous as vol
 
 from homeassistant.components.binary_sensor import PLATFORM_SCHEMA, BinarySensorEntity
+from homeassistant.helpers.device_registry import DeviceEntryType
 from . import async_get_or_create
 from homeassistant.config_entries import SOURCE_IMPORT
 from homeassistant.core import callback
@@ -173,7 +174,7 @@ class MCP23017BinarySensor(BinarySensorEntity):
             "identifiers": {(DOMAIN, self._i2c_address)},
             "manufacturer": "Microchip",
             "model": "MCP23017",
-            "entry_type": "service",
+            "entry_type": DeviceEntryType.SERVICE,
         }
 
     @property

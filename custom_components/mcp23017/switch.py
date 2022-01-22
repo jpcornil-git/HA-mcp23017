@@ -7,6 +7,7 @@ import voluptuous as vol
 
 from . import async_get_or_create
 from homeassistant.components.switch import PLATFORM_SCHEMA, ToggleEntity
+from homeassistant.helpers.device_registry import DeviceEntryType
 from homeassistant.config_entries import SOURCE_IMPORT
 from homeassistant.core import callback
 import homeassistant.helpers.config_validation as cv
@@ -150,7 +151,7 @@ class MCP23017Switch(ToggleEntity):
             "identifiers": {(DOMAIN, self._i2c_address)},
             "manufacturer": "Microchip",
             "model": "MCP23017",
-            "entry_type": "service",
+            "entry_type": DeviceEntryType.SERVICE,
         }
 
     @property

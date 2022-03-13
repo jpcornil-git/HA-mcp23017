@@ -213,7 +213,7 @@ class MCP23017Switch(ToggleEntity):
         if self.device:
             # Configure entity as output for a switch
             self._device.set_input(self._pin_number, False)
-            self._state = self._device.get_pin_value(self._pin_number)
+            self._state = self._device.get_pin_value(self._pin_number) ^ self._invert_logic
 
             return True
 

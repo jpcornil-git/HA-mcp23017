@@ -1,5 +1,4 @@
 {
-  "title": "MCP23017 Digital I/O Expander",
   "config": {
     "step": {
       "user": {

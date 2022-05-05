@@ -5,10 +5,8 @@ Improved MCP23017 implementation for Home Assistant
 
 - **Async** implementation (more reactive and nicer to HA)
 - **Thread-safety** allows different entities to use the same component
-  - Fix issue [#31867](https://github.com/home-assistant/core/issues/31867)
 - **Config Flow** support (UI configuration) in addition to legacy configuration.yaml.
 - **Push iso pull model** for higher reactivity, e.g. 100ms polling for 'zero-delay' push button without loading HA.
-- No dependencies towards AdaFruit libraries 
 - Optimized i2c bus bandwidth utilisation
   - Polling per device instead of per entity/8x gain, register cache to avoid read-modify-write/3xgain or rewriting the same register value)
 - Synchronization with the device state at startup, e.g. avoid output glitches when HA restart.
@@ -29,7 +27,8 @@ Improved MCP23017 implementation for Home Assistant
      - Created entities will be visible in the **Integrations** tab and aggregated per device (i2c address) in the **Devices** tab.
      - Entity parameters (invert logic, pull-up, ...) can be adapted using the entity's **Options** button once created.
    - **configuration.yaml** see configuration example below.
-     - Syntax is compatible with the legacy implementation described in https://www.home-assistant.io/integrations/mcp23017/
+     - Syntax is compatible with the now defunct core implementation (removed by https://github.com/home-assistant/core/pull/67281)
+       - Added **hw_sync** to synchronize initial value with hardware (true, default) or to a fixed value (false, value=invert_logic)
      - Entity parameters (invert logic, pull-up, ...) can only be set globally for all pins of a device/integration.
 
 ## Example entry for `configuration.yaml`:
@@ -64,6 +63,7 @@ switch:
       3 : Output_3
   - platform: mcp23017
     i2c_address: 0x27
+    hw_sync: false
     pins:
       0 : Output_4
       1 : Output_5

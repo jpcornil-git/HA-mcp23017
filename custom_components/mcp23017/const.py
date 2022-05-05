@@ -9,6 +9,7 @@ CONF_PINS = "pins"
 
 CONF_INVERT_LOGIC = "invert_logic"
 CONF_PULL_MODE = "pull_mode"
+CONF_HW_SYNC = "hw_sync"
 
 CONF_FLOW_PLATFORM = "platform"
 CONF_FLOW_PIN_NUMBER = "pin_number"
@@ -20,3 +21,4 @@ DEFAULT_I2C_ADDRESS = 0x20
 
 DEFAULT_INVERT_LOGIC = False
 DEFAULT_PULL_MODE = MODE_UP
+DEFAULT_HW_SYNC = True

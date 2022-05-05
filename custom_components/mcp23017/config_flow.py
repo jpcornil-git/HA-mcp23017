@@ -12,9 +12,11 @@ from .const import (
     CONF_I2C_ADDRESS,
     CONF_INVERT_LOGIC,
     CONF_PULL_MODE,
+    CONF_HW_SYNC,
     DEFAULT_I2C_ADDRESS,
     DEFAULT_INVERT_LOGIC,
     DEFAULT_PULL_MODE,
+    DEFAULT_HW_SYNC,
     DOMAIN,
     MODE_DOWN,
     MODE_UP,
@@ -138,4 +140,15 @@ class Mcp23017OptionsFlowHandler(config_entries.OptionsFlow):
                 }
             )
 
+        if self.config_entry.data[CONF_FLOW_PLATFORM] == "switch":
+            data_schema = data_schema.extend(
+                {
+                    vol.Optional(
+                        CONF_HW_SYNC,
+                        default=self.config_entry.options.get(
+                            CONF_HW_SYNC, DEFAULT_HW_SYNC
+                        ),
+                    ): bool,
+                }
+            )
         return self.async_show_form(step_id="init", data_schema=data_schema)

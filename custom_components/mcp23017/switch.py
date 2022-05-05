@@ -18,9 +18,11 @@ from .const import (
     CONF_FLOW_PLATFORM,
     CONF_I2C_ADDRESS,
     CONF_INVERT_LOGIC,
+    CONF_HW_SYNC,
     CONF_PINS,
     DEFAULT_I2C_ADDRESS,
     DEFAULT_INVERT_LOGIC,
+    DEFAULT_HW_SYNC,
     DOMAIN,
 )
 
@@ -32,6 +34,7 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     {
         vol.Required(CONF_PINS): _SWITCHES_SCHEMA,
         vol.Optional(CONF_INVERT_LOGIC, default=DEFAULT_INVERT_LOGIC): cv.boolean,
+        vol.Optional(CONF_HW_SYNC, default=DEFAULT_HW_SYNC): cv.boolean,
         vol.Optional(CONF_I2C_ADDRESS, default=DEFAULT_I2C_ADDRESS): vol.Coerce(int),
     }
 )
@@ -51,6 +54,7 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
                     CONF_FLOW_PIN_NAME: pin_name,
                     CONF_I2C_ADDRESS: config[CONF_I2C_ADDRESS],
                     CONF_INVERT_LOGIC: config[CONF_INVERT_LOGIC],
+                    CONF_HW_SYNC: config[CONF_HW_SYNC],
                 },
             )
         )
@@ -94,11 +98,21 @@ class MCP23017Switch(ToggleEntity):
             )
         )
 
+        # Get hw_sync from config flow (options) or import (data)
+        self._hw_sync = config_entry.options.get(
+            CONF_HW_SYNC,
+            config_entry.data.get(
+                CONF_HW_SYNC,
+                DEFAULT_HW_SYNC
+            )
+        )
+
         # Create or update option values for switch platform
         hass.config_entries.async_update_entry(
             config_entry,
             options={
                 CONF_INVERT_LOGIC: self._invert_logic,
+                CONF_HW_SYNC: self._hw_sync,
             },
         )
 
@@ -211,6 +225,9 @@ class MCP23017Switch(ToggleEntity):
         Return True when successful.
         """
         if self.device:
+            # Reset pin value when HW sync is not required
+            if not self._hw_sync:
+                self._device.set_pin_value(self._pin_number, self._invert_logic)
             # Configure entity as output for a switch
             self._device.set_input(self._pin_number, False)
             self._state = self._device.get_pin_value(self._pin_number) ^ self._invert_logic

@@ -1,5 +1,5 @@
 # HA-mcp23017
-Improved MCP23017 implementation for Home Assistant
+MCP23017 implementation for Home Assistant
 
 ## Highlights of what it does offer
 
@@ -28,7 +28,7 @@ Improved MCP23017 implementation for Home Assistant
      - Entity parameters (invert logic, pull-up, ...) can be adapted using the entity's **Options** button once created.
    - **configuration.yaml** see configuration example below.
      - Syntax is compatible with the now defunct core implementation (removed by https://github.com/home-assistant/core/pull/67281)
-       - Added **hw_sync** to synchronize initial value with hardware (true, default) or to a fixed value (false, value=invert_logic)
+       - New **hw_sync** option allowing to either synchronize initial value of the switch with the hardware (true, default option) or to set it to a fixed value (false, value=invert_logic)
      - Entity parameters (invert logic, pull-up, ...) can only be set globally for all pins of a device/integration.
 
 ## Example entry for `configuration.yaml`:

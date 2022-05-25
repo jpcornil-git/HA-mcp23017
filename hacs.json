@@ -1,7 +1,6 @@
 {
   "name": "MCP23017",
   "country": "BE",
-  "domains": ["switch", "binary_sensor"],
   "homeassistant": "2021.2.0",
   "iot_class": ["Local Push"]
 }

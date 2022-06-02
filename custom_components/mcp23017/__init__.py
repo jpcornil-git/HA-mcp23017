@@ -147,7 +147,7 @@ async def async_get_or_create(hass, config_entry, entity):
                     component.start_polling()
 
                 # Register a device combining all related entities
-                devices = await device_registry.async_get_registry(hass)
+                devices = device_registry.async_get(hass)
                 devices.async_get_or_create(
                     config_entry_id=config_entry.entry_id,
                     identifiers={(DOMAIN, i2c_address)},

@@ -1,5 +1,5 @@
 {
   "name": "MCP23017",
   "country": "BE",
-  "homeassistant": "2021.2.0"
+  "homeassistant": "2021.3.0"
 }

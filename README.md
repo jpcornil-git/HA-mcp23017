@@ -1,5 +1,5 @@
 # HA-mcp23017
-MCP23017 implementation for Home Assistant
+MCP23017 (and MCP23008) implementation for Home Assistant
 
 ## Highlights of what it does offer
 
@@ -10,6 +10,7 @@ MCP23017 implementation for Home Assistant
 - Optimized i2c bus bandwidth utilisation
   - Polling per device instead of per entity/8x gain, register cache to avoid read-modify-write/3xgain or rewriting the same register value)
 - Synchronization with the device state at startup, e.g. avoid output glitches when HA restart.
+- Compatible with **MCP23008** (8 pins) device.
 
 ## Installation
 

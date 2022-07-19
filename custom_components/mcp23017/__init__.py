@@ -20,29 +20,32 @@ from .const import (
     DOMAIN,
 )
 
-# MCP23017 Register Map
+# MCP23017 Register Map (IOCON.BANK = 1, MCP23008-compatible)
 IODIRA = 0x00
-IODIRB = 0x01
-IPOLA = 0x02
-IPOLB = 0x03
-GPINTENA = 0x04
-GPINTENB = 0x05
-DEFVALA = 0x06
-DEFVALB = 0x07
-INTCONA = 0x08
-INTCONB = 0x09
-IOCONA = 0x0A
-IOCONB = 0x0B
-GPPUA = 0x0C
-GPPUB = 0x0D
-INTFA = 0x0E
-INTFB = 0x0F
-INTCAPA = 0x10
-INTCAPB = 0x11
-GPIOA = 0x12
-GPIOB = 0x13
-OLATA = 0x14
-OLATB = 0x15
+IODIRB = 0x10
+IPOLA = 0x01
+IPOLB = 0x11
+GPINTENA = 0x02
+GPINTENB = 0x12
+DEFVALA = 0x03
+DEFVALB = 0x13
+INTCONA = 0x04
+INTCONB = 0x14
+IOCONA = 0x05
+IOCONB = 0x15
+GPPUA = 0x06
+GPPUB = 0x16
+INTFA = 0x07
+INTFB = 0x17
+INTCAPA = 0x08
+INTCAPB = 0x18
+GPIOA = 0x09
+GPIOB = 0x19
+OLATA = 0x0a
+OLATB = 0x1a
+
+# Register address used to toggle IOCON.BANK to 1 (only mapped when BANK is 0)
+IOCON_REMAP = 0x0b
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -192,6 +195,11 @@ class MCP23017(threading.Thread):
                 error,
             )
             raise ValueError(error) from error
+
+        # Change register map (IOCON.BANK = 1) to support/make it compatible with MCP23008
+        # - Note: when BANK is already set to 1, e.g. HA restart without power cycle,
+        #   IOCON_REMAP address is not mapped and write is ignored
+        self[IOCON_REMAP] = self[IOCON_REMAP] | 0x80
 
         self._device_lock = threading.Lock()
         self._run = False

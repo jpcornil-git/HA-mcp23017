@@ -8,7 +8,7 @@ import voluptuous as vol
 
 from homeassistant.components.binary_sensor import PLATFORM_SCHEMA, BinarySensorEntity
 from homeassistant.helpers.device_registry import DeviceEntryType
-from . import async_get_or_create
+from . import async_get_or_create, setup_entry_status
 from homeassistant.config_entries import SOURCE_IMPORT
 from homeassistant.core import callback
 import homeassistant.helpers.config_validation as cv
@@ -47,6 +47,10 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
 
 async def async_setup_platform(hass, config, async_add_entities, discovery_info=None):
     """Set up the MCP23017 platform for binary_sensor entities."""
+
+    # Wait for configflow to terminate before processing configuration.yaml
+    while setup_entry_status.busy():
+        await asyncio.sleep(0)
 
     for pin_number, pin_name in config[CONF_PINS].items():
         hass.async_create_task(

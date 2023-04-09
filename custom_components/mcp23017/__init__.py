@@ -53,6 +53,23 @@ PLATFORMS = ["binary_sensor", "switch"]
 
 MCP23017_DATA_LOCK = asyncio.Lock()
 
+class SetupEntryStatus:
+    """Class registering the number of outstanding async_setup_entry calls."""
+    def __init__(self):
+        """Initialize call counter."""
+        self.number = 0
+    def __enter__(self):
+        """Increment call counter (with statement)."""
+        self.number +=1
+    def __exit__(self, exc_type, exc_value, exc_tb):
+        """Decrement call counter (with statement)."""
+        self.number -=1
+    def busy(self):
+        """Return True when there is at least one outstanding call"""
+        return self.number != 0
+
+setup_entry_status = SetupEntryStatus()
+
 
 async def async_setup(hass, config):
     """Set up the component."""
@@ -81,19 +98,18 @@ async def async_setup(hass, config):
 async def async_setup_entry(hass, config_entry):
     """Set up the MCP23017 from a config entry."""
 
-    # Forward entry setup to configured platform
-    hass.async_create_task(
-        hass.config_entries.async_forward_entry_setup(
+    # Register this setup instance
+    with setup_entry_status:
+        # Forward entry setup to configured platform
+        await hass.config_entries.async_forward_entry_setup(
             config_entry, config_entry.data[CONF_FLOW_PLATFORM]
         )
-    )
 
     return True
 
 
 async def async_unload_entry(hass, config_entry):
     """Unload entity from MCP23017 component and platform."""
-
     # Unload related platform
     await hass.config_entries.async_forward_entry_unload(
         config_entry, config_entry.data[CONF_FLOW_PLATFORM]
@@ -124,6 +140,13 @@ async def async_unload_entry(hass, config_entry):
                     type(component).__name__,
                     i2c_address,
                 )
+        else:
+            _LOGGER.warning(
+                "%s@0x%02x component not found, unable to unload entity (pin %d).",
+                type(component).__name__,
+                i2c_address,
+                config_entry.data[CONF_FLOW_PIN_NUMBER],
+            )
 
     return True
 

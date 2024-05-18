@@ -58,7 +58,7 @@ class Mcp23017ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         config_entry =  await self.async_set_unique_id(self._unique_id(user_input))
         # Remove entry (from storage) matching the same unique id
         if config_entry:
-            self.hass.config_entries.async_remove(config_entry.entry_id)
+            await self.hass.config_entries.async_remove(config_entry.entry_id)
 
         return self.async_create_entry(
             title=self._title(user_input),

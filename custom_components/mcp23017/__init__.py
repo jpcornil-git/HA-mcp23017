@@ -101,8 +101,8 @@ async def async_setup_entry(hass, config_entry):
     # Register this setup instance
     with setup_entry_status:
         # Forward entry setup to configured platform
-        await hass.config_entries.async_forward_entry_setup(
-            config_entry, config_entry.data[CONF_FLOW_PLATFORM]
+        await hass.config_entries.async_forward_entry_setups(
+            config_entry, [config_entry.data[CONF_FLOW_PLATFORM]]
         )
 
     return True

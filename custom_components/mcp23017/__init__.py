@@ -10,6 +10,7 @@ import smbus2
 
 from homeassistant.const import EVENT_HOMEASSISTANT_START, EVENT_HOMEASSISTANT_STOP
 from homeassistant.helpers import device_registry
+from homeassistant.components import persistent_notification
 
 from .const import (
     CONF_FLOW_PIN_NUMBER,
@@ -143,7 +144,7 @@ async def async_unload_entry(hass, config_entry):
         else:
             _LOGGER.warning(
                 "%s@0x%02x component not found, unable to unload entity (pin %d).",
-                type(component).__name__,
+                f"{DOMAIN}@0x{i2c_address:02x}",
                 i2c_address,
                 config_entry.data[CONF_FLOW_PIN_NUMBER],
             )
@@ -191,7 +192,8 @@ async def async_get_or_create(hass, config_entry, entity):
         component = None
         await hass.config_entries.async_remove(config_entry.entry_id)
 
-        hass.components.persistent_notification.create(
+        persistent_notification.create(
+            hass,
             f"Error: Unable to access {DOMAIN}-0x{i2c_address:02x} ({error})",
             title=f"{DOMAIN} Configuration",
             notification_id=f"{DOMAIN} notification",

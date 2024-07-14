@@ -202,6 +202,14 @@ async def async_get_or_create(hass, config_entry, entity):
     return component
 
 
+def i2c_device_exist(address):
+    try:
+        smbus2.SMBus(DEFAULT_I2C_BUS).read_byte(address)
+    except (FileNotFoundError, OSError) as error:
+        return False
+    return True
+
+
 class MCP23017(threading.Thread):
     """MCP23017 device driver."""
 

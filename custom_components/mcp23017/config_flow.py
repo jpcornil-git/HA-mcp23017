@@ -5,6 +5,7 @@ import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.core import callback
 
+from . import i2c_device_exist
 from .const import (
     CONF_FLOW_PIN_NAME,
     CONF_FLOW_PIN_NUMBER,
@@ -79,10 +80,13 @@ class Mcp23017ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     user_input[CONF_FLOW_PIN_NUMBER],
                 )
 
-            return self.async_create_entry(
-                title=self._title(user_input),
-                data=user_input,
-            )
+            if i2c_device_exist(user_input[CONF_I2C_ADDRESS]):
+                return self.async_create_entry(
+                    title=self._title(user_input),
+                    data=user_input,
+                )
+            else:
+                return self.async_abort(reason="Invalid I2C address")
 
         return self.async_show_form(
             step_id="user",

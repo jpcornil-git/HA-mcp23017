@@ -16,7 +16,7 @@ from .const import (
     CONF_FLOW_PIN_NUMBER,
     CONF_FLOW_PLATFORM,
     CONF_I2C_ADDRESS,
-    DEFAULT_I2C_BUS,
+    CONF_I2C_BUS,
     DEFAULT_SCAN_RATE,
     DOMAIN,
 )
@@ -117,11 +117,13 @@ async def async_unload_entry(hass, config_entry):
     )
 
     i2c_address = config_entry.data[CONF_I2C_ADDRESS]
+    i2c_bus = config_entry.data[CONF_I2C_BUS]
+    i2c_bus_address = MCP23017.address_with_bus(i2c_bus, i2c_address)
 
     # DOMAIN data async mutex
     async with MCP23017_DATA_LOCK:
-        if i2c_address in hass.data[DOMAIN]:
-            component = hass.data[DOMAIN][i2c_address]
+        if i2c_bus_address in hass.data[DOMAIN]:
+            component = hass.data[DOMAIN][i2c_bus_address]
 
             # Unlink entity from component
             await hass.async_add_executor_job(
@@ -134,19 +136,19 @@ async def async_unload_entry(hass, config_entry):
             if component.has_no_entities:
                 if component.is_alive():
                     await hass.async_add_executor_job(component.stop_polling)
-                hass.data[DOMAIN].pop(i2c_address)
+                hass.data[DOMAIN].pop(i2c_bus_address)
 
                 _LOGGER.info(
                     "%s@0x%02x component destroyed",
                     type(component).__name__,
-                    i2c_address,
+                    i2c_bus_address,
                 )
         else:
             _LOGGER.warning(
-                "%s@0x%02x component not found, unable to unload entity (pin %d).",
-                f"{DOMAIN}@0x{i2c_address:02x}",
-                i2c_address,
+                "%s component not found, unable to unload entity (pin %d) on I2C bus address %s.",
+                DOMAIN,
                 config_entry.data[CONF_FLOW_PIN_NUMBER],
+                i2c_bus_address,
             )
 
     return True
@@ -156,18 +158,19 @@ async def async_get_or_create(hass, config_entry, entity):
     """Get or create a MCP23017 component from entity i2c address."""
 
     i2c_address = entity.address
-
+    i2c_bus = entity.bus
+    i2c_bus_address = MCP23017.address_with_bus(i2c_bus, i2c_address)
     # DOMAIN data async mutex
     try:
         async with MCP23017_DATA_LOCK:
-            if i2c_address in hass.data[DOMAIN]:
-                component = hass.data[DOMAIN][i2c_address]
+            if i2c_bus_address in hass.data[DOMAIN]:
+                component = hass.data[DOMAIN][i2c_bus_address]
             else:
                 # Try to create component when it doesn't exist
                 component = await hass.async_add_executor_job(
-                    functools.partial(MCP23017, DEFAULT_I2C_BUS, i2c_address)
+                    functools.partial(MCP23017, i2c_bus, i2c_address)
                 )
-                hass.data[DOMAIN][i2c_address] = component
+                hass.data[DOMAIN][i2c_bus_address] = component
 
                 # Start polling thread if hass is already running
                 if hass.is_running:
@@ -177,10 +180,10 @@ async def async_get_or_create(hass, config_entry, entity):
                 devices = device_registry.async_get(hass)
                 devices.async_get_or_create(
                     config_entry_id=config_entry.entry_id,
-                    identifiers={(DOMAIN, i2c_address)},
+                    identifiers={(DOMAIN, i2c_bus, i2c_address)},
                     manufacturer="MicroChip",
                     model=DOMAIN,
-                    name=f"{DOMAIN}@0x{i2c_address:02x}",
+                    name=f"{DOMAIN}:{i2c_bus_address}",
                 )
 
             # Link entity to component
@@ -194,7 +197,7 @@ async def async_get_or_create(hass, config_entry, entity):
 
         persistent_notification.create(
             hass,
-            f"Error: Unable to access {DOMAIN}-0x{i2c_address:02x} ({error})",
+            f"Error: Unable to access {DOMAIN}:{i2c_bus_address} ({error})",
             title=f"{DOMAIN} Configuration",
             notification_id=f"{DOMAIN} notification",
         )
@@ -204,7 +207,7 @@ async def async_get_or_create(hass, config_entry, entity):
 
 def i2c_device_exist(address):
     try:
-        smbus2.SMBus(DEFAULT_I2C_BUS).read_byte(address)
+        smbus2.SMBus(CONF_I2C_BUS).read_byte(address)
     except (FileNotFoundError, OSError) as error:
         return False
     return True
@@ -216,6 +219,7 @@ class MCP23017(threading.Thread):
     def __init__(self, bus, address):
         """Create a MCP23017 instance at {address} on I2C {bus}."""
         self._address = address
+        self._busNumber = bus
 
         # Check device presence
         try:
@@ -300,9 +304,19 @@ class MCP23017(threading.Thread):
         return self._address
 
     @property
+    def bus(self):
+        """Return device bus."""
+        return self._busNumber
+
+    @staticmethod
+    def address_with_bus(i2c_bus, i2c_address):
+        """Returns address decorated with bus"""
+        return f"{i2c_bus}:0x{i2c_address:02x}"
+
+    @property
     def unique_id(self):
         """Return component unique id."""
-        return f"{DOMAIN}-0x{self.address:02x}"
+        return f"{DOMAIN}:{self.address_with_bus(self.bus, self.address)}"
 
     @property
     def has_no_entities(self):

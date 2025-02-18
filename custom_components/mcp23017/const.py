@@ -5,6 +5,7 @@ MODE_UP = "UP"
 MODE_DOWN = "NONE"
 
 CONF_I2C_ADDRESS = "i2c_address"
+CONF_I2C_BUS = "i2c_bus"
 CONF_PINS = "pins"
 
 CONF_INVERT_LOGIC = "invert_logic"

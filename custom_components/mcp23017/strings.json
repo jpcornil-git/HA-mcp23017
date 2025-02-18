@@ -5,6 +5,7 @@
         "title": "Define New Entity",
         "data": {
           "i2c_address": "I2C address",
+          "i2c_bus": "I2C bus",
           "platform": "Platform",
           "pin_number": "Pin number",
           "pin_name": "Pin name"

@@ -14,6 +14,7 @@ Custom component for the mcp23017 and mcp23008 i2c port expander ICs.
   - Polling per device instead of per entity/8x gain, register cache to avoid read-modify-write/3xgain or rewriting the same register value)
 - Synchronization with the device state at startup, e.g. avoid output glitches when HA restart.
 - Compatible with **MCP23008** (8 pins) device.
+- Multiple **I2C** busses support.
 
 ## Useful links
 

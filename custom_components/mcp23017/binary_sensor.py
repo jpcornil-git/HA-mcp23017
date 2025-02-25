@@ -175,6 +175,7 @@ class MCP23017BinarySensor(BinarySensorEntity):
     def address(self):
         """Return the i2c address of the entity."""
         return self._i2c_address
+
     @property
     def bus(self):
         """Return the i2c bus of the entity."""

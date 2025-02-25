@@ -9,7 +9,9 @@ import time
 import smbus2
 
 from homeassistant.const import EVENT_HOMEASSISTANT_START, EVENT_HOMEASSISTANT_STOP
+from homeassistant.core import callback
 from homeassistant.helpers import device_registry
+from homeassistant.helpers.entity_registry import async_migrate_entries
 from homeassistant.components import persistent_notification
 
 from .const import (
@@ -17,6 +19,7 @@ from .const import (
     CONF_FLOW_PLATFORM,
     CONF_I2C_ADDRESS,
     CONF_I2C_BUS,
+    DEFAULT_I2C_BUS,
     DEFAULT_SCAN_RATE,
     DOMAIN,
 )
@@ -72,6 +75,47 @@ class SetupEntryStatus:
 setup_entry_status = SetupEntryStatus()
 
 
+async def async_migrate_entry(hass, config_entry):
+    """Migrate old config_entry and associated entities/devices."""
+    _LOGGER.info("Migrating from version %s", config_entry.version)
+
+    if config_entry.version == 1:
+        # Migrate config_entry
+        data = {**config_entry.data}
+        data[CONF_I2C_BUS] = DEFAULT_I2C_BUS
+        hass.config_entries.async_update_entry(
+            config_entry,
+            version=2,
+            data=data,
+            unique_id= config_entry.unique_id.replace(f"{DOMAIN}.", f"{DOMAIN}.{DEFAULT_I2C_BUS}."),
+            title = f"Bus: {DEFAULT_I2C_BUS:d}, address: {config_entry.title}"
+        )
+
+        # Migrate device
+        dev_reg = device_registry.async_get(hass)
+        for device_id, device in dev_reg.devices.items():
+            new_identifiers={(DOMAIN, DEFAULT_I2C_BUS, data[CONF_I2C_ADDRESS])}
+            if (config_entry.entry_id in device.config_entries) and (device.identifiers != new_identifiers):
+                dev_reg.async_update_device(
+                    device_id,
+                    new_identifiers=new_identifiers
+                )
+
+        # Migrate entities
+        @callback
+        def _update_unique_id(entity_entry):
+            # Update parent device
+            return {"new_unique_id": entity_entry.unique_id.replace(f"{DOMAIN}-", f"{DOMAIN}:{DEFAULT_I2C_BUS}:")}
+
+        await async_migrate_entries(hass, config_entry.entry_id, _update_unique_id)
+
+        _LOGGER.info("Migration to version %s successful", config_entry.version)
+        return True
+
+    _LOGGER.warning("Migration from version %s not supported", config_entry.version)
+    return False
+
+
 async def async_setup(hass, config):
     """Set up the component."""
 
@@ -118,12 +162,12 @@ async def async_unload_entry(hass, config_entry):
 
     i2c_address = config_entry.data[CONF_I2C_ADDRESS]
     i2c_bus = config_entry.data[CONF_I2C_BUS]
-    i2c_bus_address = MCP23017.address_with_bus(i2c_bus, i2c_address)
+    domain_id = MCP23017.domain_id(i2c_bus, i2c_address)
 
     # DOMAIN data async mutex
     async with MCP23017_DATA_LOCK:
-        if i2c_bus_address in hass.data[DOMAIN]:
-            component = hass.data[DOMAIN][i2c_bus_address]
+        if domain_id in hass.data[DOMAIN]:
+            component = hass.data[DOMAIN][domain_id]
 
             # Unlink entity from component
             await hass.async_add_executor_job(
@@ -136,19 +180,14 @@ async def async_unload_entry(hass, config_entry):
             if component.has_no_entities:
                 if component.is_alive():
                     await hass.async_add_executor_job(component.stop_polling)
-                hass.data[DOMAIN].pop(i2c_bus_address)
+                hass.data[DOMAIN].pop(domain_id)
 
-                _LOGGER.info(
-                    "%s@0x%02x component destroyed",
-                    type(component).__name__,
-                    i2c_bus_address,
-                )
+                _LOGGER.info("%s component destroyed", component.unique_id)
         else:
             _LOGGER.warning(
-                "%s component not found, unable to unload entity (pin %d) on I2C bus address %s.",
+                "%s:%s component not found, unable to unload entity.",
                 DOMAIN,
-                config_entry.data[CONF_FLOW_PIN_NUMBER],
-                i2c_bus_address,
+                domain_id,
             )
 
     return True
@@ -159,18 +198,19 @@ async def async_get_or_create(hass, config_entry, entity):
 
     i2c_address = entity.address
     i2c_bus = entity.bus
-    i2c_bus_address = MCP23017.address_with_bus(i2c_bus, i2c_address)
+    domain_id = MCP23017.domain_id(i2c_bus, i2c_address)
+
     # DOMAIN data async mutex
     try:
         async with MCP23017_DATA_LOCK:
-            if i2c_bus_address in hass.data[DOMAIN]:
-                component = hass.data[DOMAIN][i2c_bus_address]
+            if domain_id in hass.data[DOMAIN]:
+                component = hass.data[DOMAIN][domain_id]
             else:
                 # Try to create component when it doesn't exist
                 component = await hass.async_add_executor_job(
                     functools.partial(MCP23017, i2c_bus, i2c_address)
                 )
-                hass.data[DOMAIN][i2c_bus_address] = component
+                hass.data[DOMAIN][domain_id] = component
 
                 # Start polling thread if hass is already running
                 if hass.is_running:
@@ -183,7 +223,7 @@ async def async_get_or_create(hass, config_entry, entity):
                     identifiers={(DOMAIN, i2c_bus, i2c_address)},
                     manufacturer="MicroChip",
                     model=DOMAIN,
-                    name=f"{DOMAIN}:{i2c_bus_address}",
+                    name=component.unique_id,
                 )
 
             # Link entity to component
@@ -197,7 +237,7 @@ async def async_get_or_create(hass, config_entry, entity):
 
         persistent_notification.create(
             hass,
-            f"Error: Unable to access {DOMAIN}:{i2c_bus_address} ({error})",
+            f"Error: Unable to access {DOMAIN}:{domain_id} ({error})",
             title=f"{DOMAIN} Configuration",
             notification_id=f"{DOMAIN} notification",
         )
@@ -205,9 +245,9 @@ async def async_get_or_create(hass, config_entry, entity):
     return component
 
 
-def i2c_device_exist(address):
+def i2c_device_exist(bus, address):
     try:
-        smbus2.SMBus(CONF_I2C_BUS).read_byte(address)
+        smbus2.SMBus(bus).read_byte(address)
     except (FileNotFoundError, OSError) as error:
         return False
     return True
@@ -223,7 +263,7 @@ class MCP23017(threading.Thread):
 
         # Check device presence
         try:
-            self._bus = smbus2.SMBus(bus)
+            self._bus = smbus2.SMBus(self._busNumber)
             self._bus.read_byte(self._address)
         except (FileNotFoundError, OSError) as error:
             _LOGGER.error(
@@ -309,14 +349,14 @@ class MCP23017(threading.Thread):
         return self._busNumber
 
     @staticmethod
-    def address_with_bus(i2c_bus, i2c_address):
+    def domain_id(i2c_bus, i2c_address):
         """Returns address decorated with bus"""
         return f"{i2c_bus}:0x{i2c_address:02x}"
 
     @property
     def unique_id(self):
         """Return component unique id."""
-        return f"{DOMAIN}:{self.address_with_bus(self.bus, self.address)}"
+        return f"{DOMAIN}:{self.domain_id(self.bus, self.address)}"
 
     @property
     def has_no_entities(self):

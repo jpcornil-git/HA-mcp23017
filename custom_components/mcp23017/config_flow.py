@@ -31,7 +31,7 @@ PLATFORMS = ["binary_sensor", "switch"]
 class Mcp23017ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """MCP23017 config flow."""
 
-    VERSION = 1
+    VERSION = 2
     CONNECTION_CLASS = config_entries.CONN_CLASS_LOCAL_PUSH
 
     def _title(self, user_input):
@@ -85,7 +85,7 @@ class Mcp23017ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     user_input[CONF_FLOW_PIN_NUMBER],
                 )
 
-            if i2c_device_exist(user_input[CONF_I2C_ADDRESS]):
+            if i2c_device_exist(user_input[CONF_I2C_BUS], user_input[CONF_I2C_ADDRESS]):
                 return self.async_create_entry(
                     title=self._title(user_input),
                     data=user_input,
@@ -98,11 +98,11 @@ class Mcp23017ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             data_schema=vol.Schema(
                 {
                     vol.Required(
+                        CONF_I2C_BUS, default=DEFAULT_I2C_BUS
+                    ): vol.All(vol.Coerce(int), vol.Range(min=0, max=9)),
+                    vol.Required(
                         CONF_I2C_ADDRESS, default=DEFAULT_I2C_ADDRESS
                     ): vol.All(vol.Coerce(int), vol.Range(min=0, max=127)),
-                    vol.Required(
-                        CONF_I2C_BUS, default=DEFAULT_I2C_BUS
-                    ): vol.All(vol.Coerce(int), vol.Range(min=0, max=5)),
                     vol.Required(CONF_FLOW_PIN_NUMBER, default=0): vol.All(
                         vol.Coerce(int), vol.Range(min=0, max=15)
                     ),

@@ -61,7 +61,8 @@ switch:
     pins:
       0 : Output_0
       1 : Output_1
-      2 : Output_2
+      2 :
+         name: Output_2
       3 : Output_3
   - platform: mcp23017
     i2c_bus: 2
@@ -69,7 +70,10 @@ switch:
     hw_sync: false
     pins:
       0 : Output_4
-      1 : Output_5
+      1 :
+         name: Output_5
+         momentary: true  # (default false)
+         pulse_time: 200  # Pulse duration in ms. Can be omitted as the default value for pulse_time is set to 200.
       2 : Output_6
       3 : Output_7
 ```

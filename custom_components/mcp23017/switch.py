@@ -7,7 +7,7 @@ import logging
 import voluptuous as vol
 
 from . import async_get_or_create, setup_entry_status
-from homeassistant.components.switch import PLATFORM_SCHEMA, ToggleEntity
+from homeassistant.components.switch import PLATFORM_SCHEMA, SwitchEntity
 from homeassistant.helpers.device_registry import DeviceEntryType
 from homeassistant.config_entries import SOURCE_IMPORT
 from homeassistant.core import callback
@@ -22,27 +22,47 @@ from .const import (
     CONF_INVERT_LOGIC,
     CONF_HW_SYNC,
     CONF_PINS,
+    CONF_MOMENTARY,
+    CONF_PULSE_TIME,
+    CONF_PIN_NAME,
     DEFAULT_I2C_ADDRESS,
     DEFAULT_I2C_BUS,
     DEFAULT_INVERT_LOGIC,
     DEFAULT_HW_SYNC,
+    DEFAULT_MOMENTARY,
+    DEFAULT_PULSE_TIME,
     DOMAIN,
 )
 
 _LOGGER = logging.getLogger(__name__)
 
-_SWITCHES_SCHEMA = vol.Schema({cv.positive_int: cv.string})
+# Schema for simple pin configuration (e.g., "0: setBi16")
+_SIMPLE_PIN_SCHEMA = cv.string
+
+# Schema for advanced pin configuration (e.g., "1: {name: lt_ogrod_kinkiet_taras, ...}")
+_ADVANCED_PIN_SCHEMA = vol.Schema(
+    {
+        vol.Required(CONF_PIN_NAME): cv.string,
+        vol.Optional(CONF_MOMENTARY, default=DEFAULT_MOMENTARY): cv.boolean,
+        vol.Optional(CONF_PULSE_TIME, default=DEFAULT_PULSE_TIME): cv.positive_int,
+    }
+)
+
+# Combine simple and advanced pin schemas
+_PIN_SCHEMA = vol.Any(_SIMPLE_PIN_SCHEMA, _ADVANCED_PIN_SCHEMA)
+
+# Schema for the entire pins dictionary
+_PINS_SCHEMA = vol.Schema({cv.positive_int: _PIN_SCHEMA})
 
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     {
-        vol.Required(CONF_PINS): _SWITCHES_SCHEMA,
+        vol.Required(CONF_PINS): _PINS_SCHEMA,
         vol.Optional(CONF_INVERT_LOGIC, default=DEFAULT_INVERT_LOGIC): cv.boolean,
         vol.Optional(CONF_HW_SYNC, default=DEFAULT_HW_SYNC): cv.boolean,
         vol.Optional(CONF_I2C_ADDRESS, default=DEFAULT_I2C_ADDRESS): vol.Coerce(int),
         vol.Optional(CONF_I2C_BUS, default=DEFAULT_I2C_BUS): vol.Coerce(int),
     }
 )
-
 
 async def async_setup_platform(hass, config, async_add_entities, discovery_info=None):
     """Set up the MCP23017 for switch entities."""
@@ -51,7 +71,18 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
     while setup_entry_status.busy():
         await asyncio.sleep(0)
 
-    for pin_number, pin_name in config[CONF_PINS].items():
+    for pin_number, pin_config in config[CONF_PINS].items():
+        if isinstance(pin_config, dict):
+            # Advanced configuration
+            pin_name = pin_config[CONF_PIN_NAME]
+            momentary = pin_config[CONF_MOMENTARY]
+            pulse_time = pin_config[CONF_PULSE_TIME]
+        else:
+            # Simple configuration
+            pin_name = pin_config
+            momentary = DEFAULT_MOMENTARY
+            pulse_time = DEFAULT_PULSE_TIME
+
         hass.async_create_task(
             hass.config_entries.flow.async_init(
                 DOMAIN,
@@ -64,10 +95,11 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
                     CONF_I2C_BUS: config[CONF_I2C_BUS],
                     CONF_INVERT_LOGIC: config[CONF_INVERT_LOGIC],
                     CONF_HW_SYNC: config[CONF_HW_SYNC],
+                    CONF_MOMENTARY: momentary,
+                    CONF_PULSE_TIME: pulse_time,
                 },
             )
         )
-
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
     """Set up a MCP23017 switch entry."""
@@ -86,7 +118,7 @@ async def async_unload_entry(hass, config_entry):
     _LOGGER.warning("[FIXME] async_unload_entry not implemented")
 
 
-class MCP23017Switch(ToggleEntity):
+class MCP23017Switch(SwitchEntity):
     """Represent a switch that uses MCP23017."""
 
     def __init__(self, hass, config_entry):
@@ -116,6 +148,20 @@ class MCP23017Switch(ToggleEntity):
                 DEFAULT_HW_SYNC
             )
         )
+        self._momentary = config_entry.options.get(
+            CONF_MOMENTARY,
+            config_entry.data.get(
+                CONF_MOMENTARY,
+                DEFAULT_MOMENTARY
+            )
+        )
+        self._pulse_time = config_entry.options.get(
+            CONF_PULSE_TIME,
+            config_entry.data.get(
+                CONF_PULSE_TIME,
+                DEFAULT_PULSE_TIME
+            )
+        )
 
         # Create or update option values for switch platform
         hass.config_entries.async_update_entry(
@@ -123,6 +169,8 @@ class MCP23017Switch(ToggleEntity):
             options={
                 CONF_INVERT_LOGIC: self._invert_logic,
                 CONF_HW_SYNC: self._hw_sync,
+                CONF_MOMENTARY: self._momentary,
+                CONF_PULSE_TIME: self._pulse_time,
             },
         )
 
@@ -141,7 +189,7 @@ class MCP23017Switch(ToggleEntity):
     @property
     def icon(self):
         """Return device icon for this entity."""
-        return "mdi:chip"
+        return "mdi:toggle-switch"
 
     @property
     def unique_id(self):
@@ -193,25 +241,50 @@ class MCP23017Switch(ToggleEntity):
         """Set device property."""
         self._device = value
 
+    async def _async_set_pin_value(self, value):
+        """
+        Set the pin value and update the state.
+        :param value: Desired logical state (True for on, False for off).
+        """
+        try:
+            # Apply invert_logic to the value before setting the pin
+            pin_value = not value if self._invert_logic else value
+            await self.hass.async_add_executor_job(
+                functools.partial(self._device.set_pin_value, self._pin_number, pin_value)
+            )
+            self._state = value
+            self.async_write_ha_state()
+            _LOGGER.debug(f"{self._pin_name} set to {value} (invert_logic: {self._invert_logic}).")
+        except Exception as e:
+            _LOGGER.error(f"Failed to set {self._pin_name} to {value}: {e}")
+            
+    async def _async_toggle_momentary_switch(self):
+        """Toggle a momentary switch on and off after the pulse time."""
+        await self._async_set_pin_value(True)  # Turn on
+        await asyncio.sleep(self._pulse_time / 1000)  # Wait for pulse time
+        await self._async_set_pin_value(False)  # Turn off
+
     async def async_turn_on(self, **kwargs):
         """Turn the device on."""
-        await self.hass.async_add_executor_job(
-            functools.partial(
-                self._device.set_pin_value, self._pin_number, not self._invert_logic
-            )
-        )
-        self._state = True
-        self.schedule_update_ha_state()
+        if self.is_on:
+            _LOGGER.debug(f"{self._pin_name} is already on. Skipping.")
+            return
+
+        if self._momentary:
+            await self._async_toggle_momentary_switch()
+        else:
+            await self._async_set_pin_value(True)
 
     async def async_turn_off(self, **kwargs):
         """Turn the device off."""
-        await self.hass.async_add_executor_job(
-            functools.partial(
-                self._device.set_pin_value, self._pin_number, self._invert_logic
-            )
-        )
-        self._state = False
-        self.schedule_update_ha_state()
+        if not self.is_on:
+            _LOGGER.debug(f"{self._pin_name} is already off. Skipping.")
+            return
+
+        if self._momentary:
+            await self._async_toggle_momentary_switch()
+        else:
+            await self._async_set_pin_value(False)  
 
     @callback
     async def async_config_update(self, hass, config_entry):

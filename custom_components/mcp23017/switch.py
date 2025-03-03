@@ -11,6 +11,7 @@ from homeassistant.components.switch import PLATFORM_SCHEMA, ToggleEntity
 from homeassistant.helpers.device_registry import DeviceEntryType
 from homeassistant.config_entries import SOURCE_IMPORT
 from homeassistant.core import callback
+from homeassistant.helpers.event import async_call_later
 import homeassistant.helpers.config_validation as cv
 
 from .const import (
@@ -22,10 +23,14 @@ from .const import (
     CONF_INVERT_LOGIC,
     CONF_HW_SYNC,
     CONF_PINS,
+    CONF_MOMENTARY,
+    CONF_PULSE_TIME,
     DEFAULT_I2C_ADDRESS,
     DEFAULT_I2C_BUS,
     DEFAULT_INVERT_LOGIC,
     DEFAULT_HW_SYNC,
+    DEFAULT_MOMENTARY,
+    DEFAULT_PULSE_TIME,
     DOMAIN,
 )
 
@@ -68,7 +73,6 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
             )
         )
 
-
 async def async_setup_entry(hass, config_entry, async_add_entities):
     """Set up a MCP23017 switch entry."""
 
@@ -93,6 +97,7 @@ class MCP23017Switch(ToggleEntity):
         """Initialize the MCP23017 switch."""
         self._device = None
         self._state = None
+        self._turn_off_timer_cancel = None
 
         self._i2c_address = config_entry.data[CONF_I2C_ADDRESS]
         self._i2c_bus = config_entry.data[CONF_I2C_BUS]
@@ -116,6 +121,20 @@ class MCP23017Switch(ToggleEntity):
                 DEFAULT_HW_SYNC
             )
         )
+        self._momentary = config_entry.options.get(
+            CONF_MOMENTARY,
+            config_entry.data.get(
+                CONF_MOMENTARY,
+                DEFAULT_MOMENTARY
+            )
+        )
+        self._pulse_time = config_entry.options.get(
+            CONF_PULSE_TIME,
+            config_entry.data.get(
+                CONF_PULSE_TIME,
+                DEFAULT_PULSE_TIME
+            )
+        )
 
         # Create or update option values for switch platform
         hass.config_entries.async_update_entry(
@@ -123,6 +142,8 @@ class MCP23017Switch(ToggleEntity):
             options={
                 CONF_INVERT_LOGIC: self._invert_logic,
                 CONF_HW_SYNC: self._hw_sync,
+                CONF_MOMENTARY: self._momentary,
+                CONF_PULSE_TIME: self._pulse_time,
             },
         )
 
@@ -203,6 +224,19 @@ class MCP23017Switch(ToggleEntity):
         self._state = True
         self.schedule_update_ha_state()
 
+        if self._momentary:
+            if self._turn_off_timer_cancel:
+                self._turn_off_timer_cancel()
+
+            async def turn_off_listener(now):
+                await self.async_turn_off()
+
+            self._turn_off_timer_cancel = async_call_later(
+                self.hass,
+                self._pulse_time / 1000.0,
+                turn_off_listener
+            )
+
     async def async_turn_off(self, **kwargs):
         """Turn the device off."""
         await self.hass.async_add_executor_job(
@@ -213,10 +247,17 @@ class MCP23017Switch(ToggleEntity):
         self._state = False
         self.schedule_update_ha_state()
 
+        if self._momentary:
+            if self._turn_off_timer_cancel:
+                self._turn_off_timer_cancel()
+                self._turn_off_timer_cancel = None
+
     @callback
     async def async_config_update(self, hass, config_entry):
         """Handle update from config entry options."""
         self._invert_logic = config_entry.options[CONF_INVERT_LOGIC]
+        self._momentary = config_entry.options[CONF_MOMENTARY]
+        self._pulse_time = config_entry.options[CONF_PULSE_TIME]
         await hass.async_add_executor_job(
             functools.partial(
                 self._device.set_pin_value,

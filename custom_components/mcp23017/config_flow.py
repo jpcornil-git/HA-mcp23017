@@ -15,11 +15,15 @@ from .const import (
     CONF_INVERT_LOGIC,
     CONF_PULL_MODE,
     CONF_HW_SYNC,
+    CONF_MOMENTARY,
+    CONF_PULSE_TIME,
     DEFAULT_I2C_ADDRESS,
     DEFAULT_I2C_BUS,
     DEFAULT_INVERT_LOGIC,
     DEFAULT_PULL_MODE,
     DEFAULT_HW_SYNC,
+    DEFAULT_MOMENTARY,
+    DEFAULT_PULSE_TIME,
     DOMAIN,
     MODE_DOWN,
     MODE_UP,
@@ -161,6 +165,18 @@ class Mcp23017OptionsFlowHandler(config_entries.OptionsFlow):
                             CONF_HW_SYNC, DEFAULT_HW_SYNC
                         ),
                     ): bool,
+                    vol.Optional(
+                        CONF_MOMENTARY,
+                        default=self.config_entry.options.get(
+                            CONF_MOMENTARY, DEFAULT_MOMENTARY
+                        ),
+                    ): bool,
+                    vol.Optional(
+                        CONF_PULSE_TIME,
+                        default=self.config_entry.options.get(
+                            CONF_PULSE_TIME, DEFAULT_PULSE_TIME
+                        ),
+                    ): vol.All(vol.Coerce(int), vol.Range(min=0)),
                 }
             )
         return self.async_show_form(step_id="init", data_schema=data_schema)

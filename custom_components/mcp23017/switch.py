@@ -11,6 +11,7 @@ from homeassistant.components.switch import PLATFORM_SCHEMA, SwitchEntity
 from homeassistant.helpers.device_registry import DeviceEntryType
 from homeassistant.config_entries import SOURCE_IMPORT
 from homeassistant.core import callback
+from homeassistant.helpers.event import async_call_later
 import homeassistant.helpers.config_validation as cv
 
 from .const import (
@@ -125,6 +126,7 @@ class MCP23017Switch(SwitchEntity):
         """Initialize the MCP23017 switch."""
         self._device = None
         self._state = None
+        self._unsub_turn_off = None
 
         self._i2c_address = config_entry.data[CONF_I2C_ADDRESS]
         self._i2c_bus = config_entry.data[CONF_I2C_BUS]
@@ -257,23 +259,39 @@ class MCP23017Switch(SwitchEntity):
             _LOGGER.debug(f"{self._pin_name} set to {value} (invert_logic: {self._invert_logic}).")
         except Exception as e:
             _LOGGER.error(f"Failed to set {self._pin_name} to {value}: {e}")
-            
-    async def _async_toggle_momentary_switch(self):
-        """Toggle a momentary switch on and off after the pulse time."""
-        await self._async_set_pin_value(True)  # Turn on
-        await asyncio.sleep(self._pulse_time / 1000)  # Wait for pulse time
-        await self._async_set_pin_value(False)  # Turn off
+
+    async def _async_handle_turn_off(self, _):
+        """Callback to turn off the switch after the pulse time."""
+        await self._async_set_pin_value(False)
+        self._unsub_turn_off = None 
+
+    async def _async_schedule_turn_off(self):
+        """Schedule the turn-off callback after the pulse time."""
+        self._unsub_turn_off = async_call_later(
+            self.hass,
+            self._pulse_time / 1000.0,  # Convert milliseconds to seconds
+            self._async_handle_turn_off  # Callback to turn off the switch
+        )
+        _LOGGER.debug(f"{self._pin_name} scheduled to turn off in {self._pulse_time} ms.")
+        
+    async def _async_cancel_turn_off_callback_if_exists(self):
+        """Cancel any scheduled turn-off callback."""
+        if self._unsub_turn_off:
+            self._unsub_turn_off()
+            self._unsub_turn_off = None
+            _LOGGER.debug(f"{self._pin_name} turn-off callback cancelled.")
 
     async def async_turn_on(self, **kwargs):
         """Turn the device on."""
-        if self.is_on:
+        if self.is_on and not self._momentary:
             _LOGGER.debug(f"{self._pin_name} is already on. Skipping.")
             return
 
+        await self._async_set_pin_value(True)
+
         if self._momentary:
-            await self._async_toggle_momentary_switch()
-        else:
-            await self._async_set_pin_value(True)
+            await self._async_cancel_turn_off_callback_if_exists()
+            await self._async_schedule_turn_off()
 
     async def async_turn_off(self, **kwargs):
         """Turn the device off."""
@@ -282,9 +300,9 @@ class MCP23017Switch(SwitchEntity):
             return
 
         if self._momentary:
-            await self._async_toggle_momentary_switch()
-        else:
-            await self._async_set_pin_value(False)  
+            await self._async_cancel_turn_off_callback_if_exists()
+       
+        await self._async_set_pin_value(False)  
 
     @callback
     async def async_config_update(self, hass, config_entry):

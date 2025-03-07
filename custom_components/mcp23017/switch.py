@@ -126,7 +126,7 @@ class MCP23017Switch(SwitchEntity):
         """Initialize the MCP23017 switch."""
         self._device = None
         self._state = None
-        self._unsub_turn_off = None
+        self._turn_off_timer = None
 
         self._i2c_address = config_entry.data[CONF_I2C_ADDRESS]
         self._i2c_bus = config_entry.data[CONF_I2C_BUS]
@@ -263,11 +263,11 @@ class MCP23017Switch(SwitchEntity):
     async def _async_handle_turn_off(self, _):
         """Callback to turn off the switch after the pulse time."""
         await self._async_set_pin_value(False)
-        self._unsub_turn_off = None 
+        self._turn_off_timer = None 
 
     async def _async_schedule_turn_off(self):
         """Schedule the turn-off callback after the pulse time."""
-        self._unsub_turn_off = async_call_later(
+        self._turn_off_timer = async_call_later(
             self.hass,
             self._pulse_time / 1000.0,  # Convert milliseconds to seconds
             self._async_handle_turn_off  # Callback to turn off the switch
@@ -276,9 +276,9 @@ class MCP23017Switch(SwitchEntity):
         
     async def _async_cancel_turn_off_callback_if_exists(self):
         """Cancel any scheduled turn-off callback."""
-        if self._unsub_turn_off:
-            self._unsub_turn_off()
-            self._unsub_turn_off = None
+        if self._turn_off_timer:
+            self._turn_off_timer.cancel()
+            self._turn_off_timer = None
             _LOGGER.debug(f"{self._pin_name} turn-off callback cancelled.")
 
     async def async_turn_on(self, **kwargs):

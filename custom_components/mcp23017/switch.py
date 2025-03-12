@@ -7,7 +7,7 @@ import logging
 import voluptuous as vol
 
 from . import async_get_or_create, setup_entry_status
-from homeassistant.components.switch import PLATFORM_SCHEMA, ToggleEntity
+from homeassistant.components.switch import PLATFORM_SCHEMA, SwitchEntity
 from homeassistant.helpers.device_registry import DeviceEntryType
 from homeassistant.config_entries import SOURCE_IMPORT
 from homeassistant.core import callback
@@ -90,7 +90,7 @@ async def async_unload_entry(hass, config_entry):
     _LOGGER.warning("[FIXME] async_unload_entry not implemented")
 
 
-class MCP23017Switch(ToggleEntity):
+class MCP23017Switch(SwitchEntity):
     """Represent a switch that uses MCP23017."""
 
     def __init__(self, hass, config_entry):

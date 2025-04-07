@@ -14,6 +14,7 @@ CONF_HW_SYNC = "hw_sync"
 
 CONF_MOMENTARY = "momentary"
 CONF_PULSE_TIME = "pulse_time"
+CONF_SENSOR = "sensor"
 
 CONF_FLOW_PLATFORM = "platform"
 CONF_FLOW_PIN_NUMBER = "pin_number"

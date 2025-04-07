@@ -17,6 +17,7 @@ from .const import (
     CONF_HW_SYNC,
     CONF_MOMENTARY,
     CONF_PULSE_TIME,
+    CONF_SENSOR,
     DEFAULT_I2C_ADDRESS,
     DEFAULT_I2C_BUS,
     DEFAULT_INVERT_LOGIC,
@@ -177,6 +178,7 @@ class Mcp23017OptionsFlowHandler(config_entries.OptionsFlow):
                             CONF_PULSE_TIME, DEFAULT_PULSE_TIME
                         ),
                     ): vol.All(vol.Coerce(int), vol.Range(min=0)),
+                    vol.Optional(CONF_SENSOR): str,
                 }
             )
         return self.async_show_form(step_id="init", data_schema=data_schema)

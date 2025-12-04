@@ -55,7 +55,6 @@ class Mcp23017ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     @callback
     def async_get_options_flow(config_entry):
         """Add support for config flow options."""
-        # config_entry wird intern im OptionsFlow gesetzt
         return Mcp23017OptionsFlowHandler()
 
     async def async_step_import(self, user_input=None):
@@ -121,8 +120,6 @@ class Mcp23017OptionsFlowHandler(config_entries.OptionsFlow):
 
     def __init__(self):
         """Initialize options flow."""
-        # WICHTIG: kein config_entry-Parameter, kein self.config_entry-Assign
-        # self.config_entry wird von OptionsFlow bereitgestellt
         pass
 
     async def async_step_init(self, user_input=None):

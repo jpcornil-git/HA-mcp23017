@@ -1,6 +1,8 @@
 """Config flow for MCP23017 component."""
 
 import voluptuous as vol
+import logging
+_LOGGER = logging.getLogger(__name__)
 
 from homeassistant import config_entries
 from homeassistant.core import callback
@@ -55,7 +57,7 @@ class Mcp23017ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     @callback
     def async_get_options_flow(config_entry):
         """Add support for config flow options."""
-        return Mcp23017OptionsFlowHandler()
+        return Mcp23017OptionsFlowHandler(config_entry)
 
     async def async_step_import(self, user_input=None):
         """Create a new entity from configuration.yaml import."""
@@ -84,24 +86,25 @@ class Mcp23017ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     user_input[CONF_FLOW_PIN_NUMBER],
                 )
 
-            if i2c_device_exist(user_input[CONF_I2C_BUS], user_input[CONF_I2C_ADDRESS]):
-                return self.async_create_entry(
-                    title=self._title(user_input),
-                    data=user_input,
-                )
-            else:
-                return self.async_abort(reason="Invalid I2C address")
+            # WICHTIG:
+            # KEINE i2c_device_exist-Prüfung mehr.
+            # Egal ob Bus/Adresse geprüft werden kann – wir legen den Eintrag an.
+
+            return self.async_create_entry(
+                title=self._title(user_input),
+                data=user_input,
+            )
 
         return self.async_show_form(
             step_id="user",
             data_schema=vol.Schema(
                 {
-                    vol.Required(
-                        CONF_I2C_BUS, default=DEFAULT_I2C_BUS
-                    ): vol.All(vol.Coerce(int), vol.Range(min=0, max=9)),
-                    vol.Required(
-                        CONF_I2C_ADDRESS, default=DEFAULT_I2C_ADDRESS
-                    ): vol.All(vol.Coerce(int), vol.Range(min=0, max=127)),
+                    vol.Required(CONF_I2C_BUS, default=DEFAULT_I2C_BUS): vol.All(
+                        vol.Coerce(int), vol.Range(min=0, max=9)
+                    ),
+                    vol.Required(CONF_I2C_ADDRESS, default=DEFAULT_I2C_ADDRESS): vol.All(
+                        vol.Coerce(int), vol.Range(min=0, max=127)
+                    ),
                     vol.Required(CONF_FLOW_PIN_NUMBER, default=0): vol.All(
                         vol.Coerce(int), vol.Range(min=0, max=15)
                     ),
@@ -118,9 +121,11 @@ class Mcp23017ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 class Mcp23017OptionsFlowHandler(config_entries.OptionsFlow):
     """MCP23017 config flow options."""
 
-    def __init__(self):
+    def __init__(self, config_entry):
         """Initialize options flow."""
-        pass
+        # WICHTIG: nicht mehr auf die Property `config_entry` schreiben,
+        # sondern lokal unter anderem Namen speichern.
+        self._config_entry = config_entry
 
     async def async_step_init(self, user_input=None):
         """Manage entity options."""
@@ -132,33 +137,35 @@ class Mcp23017OptionsFlowHandler(config_entries.OptionsFlow):
             {
                 vol.Optional(
                     CONF_INVERT_LOGIC,
-                    default=self.config_entry.options.get(
+                    default=self._config_entry.options.get(
                         CONF_INVERT_LOGIC, DEFAULT_INVERT_LOGIC
                     ),
                 ): bool,
             }
         )
-        if self.config_entry.data[CONF_FLOW_PLATFORM] == "binary_sensor":
+
+        if self._config_entry.data[CONF_FLOW_PLATFORM] == "binary_sensor":
             data_schema = data_schema.extend(
                 {
                     vol.Optional(
                         CONF_PULL_MODE,
-                        default=self.config_entry.options.get(
+                        default=self._config_entry.options.get(
                             CONF_PULL_MODE, DEFAULT_PULL_MODE
                         ),
                     ): vol.In([MODE_UP, MODE_DOWN]),
                 }
             )
 
-        if self.config_entry.data[CONF_FLOW_PLATFORM] == "switch":
+        if self._config_entry.data[CONF_FLOW_PLATFORM] == "switch":
             data_schema = data_schema.extend(
                 {
                     vol.Optional(
                         CONF_HW_SYNC,
-                        default=self.config_entry.options.get(
+                        default=self._config_entry.options.get(
                             CONF_HW_SYNC, DEFAULT_HW_SYNC
                         ),
                     ): bool,
                 }
             )
+
         return self.async_show_form(step_id="init", data_schema=data_schema)

@@ -305,11 +305,27 @@ class MCP23017(threading.Thread):
 
     def __setitem__(self, register, value):
         """Set MCP23017 {register} to {value}."""
-        self._bus.write_byte_data(self._address, register, value)
+        try:
+            self._bus.write_byte_data(self._address, register, value)
+        except (OSError) as error:
+            _LOGGER.error(
+                "I2C write failure 0x%02x[0x%02x] <- 0x%02x",
+                self._address,
+                register,
+                value,
+            )
 
     def __getitem__(self, register):
         """Get value of MCP23017 {register}."""
-        data = self._bus.read_byte_data(self._address, register)
+        try:
+            data = self._bus.read_byte_data(self._address, register)
+        except (OSError) as error:
+            data = 0
+            _LOGGER.error(
+                "I2C read failure 0x%02x[0x%02x]",
+                self._address,
+                register,
+            )
         return data
 
     def _get_register_value(self, register, bit):

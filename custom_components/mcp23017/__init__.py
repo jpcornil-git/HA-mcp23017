@@ -260,8 +260,7 @@ class MCP23017(threading.Thread):
         """Create a MCP23017 instance at {address} on I2C {bus}."""
         self._address = address
         self._busNumber = bus
-        self._i2c_faulted = False
-        self._i2c_suppressed_logs = 0
+        self._i2c_fault_count = 0
 
         # Check device presence
         try:
@@ -309,17 +308,16 @@ class MCP23017(threading.Thread):
         """Set MCP23017 {register} to {value}."""
         try:
             self._bus.write_byte_data(self._address, register, value)
-            if self._i2c_faulted:
+            if self._i2c_fault_count > 0:
                 _LOGGER.info(
                     "I2C access recovered for %s (suppressed %d log(s))",
                     self.unique_id,
-                    self._i2c_suppressed_logs,
+                    self._i2c_fault_count,
                 )
-                self._i2c_faulted = False
-                self._i2c_suppressed_logs = 0
+                self._i2c_fault_count = 0
         except (OSError) as error:
-            if self._i2c_faulted:
-                self._i2c_suppressed_logs += 1
+            if self._i2c_fault_count > 0:
+                self._i2c_fault_count += 1
             else:
                 _LOGGER.error(
                     "I2C write failure %s 0x%02x[0x%02x] <- 0x%02x (%s); suppressing until recovery",
@@ -329,25 +327,23 @@ class MCP23017(threading.Thread):
                     value,
                     error,
                 )
-                self._i2c_faulted = True
-                self._i2c_suppressed_logs = 0
+                self._i2c_fault_count = 1
 
     def __getitem__(self, register):
         """Get value of MCP23017 {register}."""
         try:
             data = self._bus.read_byte_data(self._address, register)
-            if self._i2c_faulted:
+            if self._i2c_fault_count > 0:
                 _LOGGER.info(
                     "I2C access recovered for %s (suppressed %d log(s))",
                     self.unique_id,
-                    self._i2c_suppressed_logs,
+                    self._i2c_fault_count,
                 )
-                self._i2c_faulted = False
-                self._i2c_suppressed_logs = 0
+                self._i2c_fault_count = 0
         except (OSError) as error:
             data = 0
-            if self._i2c_faulted:
-                self._i2c_suppressed_logs += 1
+            if self._i2c_fault_count > 0:
+                self._i2c_fault_count += 1
             else:
                 _LOGGER.error(
                     "I2C read failure %s 0x%02x[0x%02x] (%s); suppressing until recovery",
@@ -356,8 +352,7 @@ class MCP23017(threading.Thread):
                     register,
                     error,
                 )
-                self._i2c_faulted = True
-                self._i2c_suppressed_logs = 0
+                self._i2c_fault_count = 1
         return data
 
     def _get_register_value(self, register, bit):

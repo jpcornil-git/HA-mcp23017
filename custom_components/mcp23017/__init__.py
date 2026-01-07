@@ -320,9 +320,8 @@ class MCP23017(threading.Thread):
                 self._i2c_fault_count += 1
             else:
                 _LOGGER.error(
-                    "I2C write failure %s 0x%02x[0x%02x] <- 0x%02x (%s); suppressing until recovery",
+                    "I2C write failure %s [0x%02x] <- 0x%02x (%s); suppressing until recovery",
                     self.unique_id,
-                    self._address,
                     register,
                     value,
                     error,
@@ -346,9 +345,8 @@ class MCP23017(threading.Thread):
                 self._i2c_fault_count += 1
             else:
                 _LOGGER.error(
-                    "I2C read failure %s 0x%02x[0x%02x] (%s); suppressing until recovery",
+                    "I2C read failure %s [0x%02x] (%s); suppressing until recovery",
                     self.unique_id,
-                    self._address,
                     register,
                     error,
                 )

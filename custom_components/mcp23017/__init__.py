@@ -260,6 +260,7 @@ class MCP23017(threading.Thread):
         """Create a MCP23017 instance at {address} on I2C {bus}."""
         self._address = address
         self._busNumber = bus
+        self._i2c_fault_count = 0
 
         # Check device presence
         try:
@@ -307,25 +308,45 @@ class MCP23017(threading.Thread):
         """Set MCP23017 {register} to {value}."""
         try:
             self._bus.write_byte_data(self._address, register, value)
+            if self._i2c_fault_count > 0:
+                _LOGGER.info(
+                    "I2C access recovered for %s after %d error(s)",
+                    self.unique_id,
+                    self._i2c_fault_count,
+                )
+                self._i2c_fault_count = 0
         except (OSError) as error:
-            _LOGGER.error(
-                "I2C write failure 0x%02x[0x%02x] <- 0x%02x",
-                self._address,
-                register,
-                value,
-            )
+            self._i2c_fault_count += 1
+            if self._i2c_fault_count == 1:
+                _LOGGER.error(
+                    "I2C write failure %s [0x%02x] <- 0x%02x (%s); suppressing until recovery",
+                    self.unique_id,
+                    register,
+                    value,
+                    error,
+                )
 
     def __getitem__(self, register):
         """Get value of MCP23017 {register}."""
         try:
             data = self._bus.read_byte_data(self._address, register)
+            if self._i2c_fault_count > 0:
+                _LOGGER.info(
+                    "I2C access recovered for %s after %d error(s)",
+                    self.unique_id,
+                    self._i2c_fault_count,
+                )
+                self._i2c_fault_count = 0
         except (OSError) as error:
             data = 0
-            _LOGGER.error(
-                "I2C read failure 0x%02x[0x%02x]",
-                self._address,
-                register,
-            )
+            self._i2c_fault_count += 1
+            if self._i2c_fault_count == 1:
+                _LOGGER.error(
+                    "I2C read failure %s [0x%02x] (%s); suppressing until recovery",
+                    self.unique_id,
+                    register,
+                    error,
+                )
         return data
 
     def _get_register_value(self, register, bit):

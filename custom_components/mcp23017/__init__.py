@@ -354,7 +354,7 @@ class MCP23017(threading.Thread):
         if bit < 8:
             value = self[globals()[register + "A"]]
             if value is not None:
-                self._cache[register] = self._cache[register] & 0xFF00 | value & 0xFF00
+                self._cache[register] = self._cache[register] & 0xFF00 | value & 0x00FF
         else:
             value = self[globals()[register + "B"]]
             if value is not None:

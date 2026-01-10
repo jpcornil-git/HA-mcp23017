@@ -286,8 +286,10 @@ class MCP23017(threading.Thread):
                 "OLAT": (self[OLATB] << 8) + self[OLATA],
             }
         except TypeError as error:
-            raise ValueError("I2C read failure during MCP23017 initialization")
-
+            raise ValueError(
+                f"I2C read failure during {self.unique_id} initialization"
+            ) from error
+            
         self._entities = [None for i in range(16)]
         self._update_bitmap = 0
         self._device_lock = threading.Lock()

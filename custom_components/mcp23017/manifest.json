@@ -8,5 +8,5 @@
   "iot_class": "local_push",
   "issue_tracker": "https://github.com/jpcornil-git/HA-mcp23017/issues",
   "requirements": ["smbus2>=0.3.0"],
-  "version": "1.4.0"
+  "version": "1.4.2"
 }

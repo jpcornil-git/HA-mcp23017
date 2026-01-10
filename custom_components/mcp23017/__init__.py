@@ -274,11 +274,12 @@ class MCP23017(threading.Thread):
             )
             raise ValueError(error) from error
 
-        # Change register map (IOCON.BANK = 1) to support/make it compatible with MCP23008
-        # - Note: when BANK is already set to 1, e.g. HA restart without power cycle,
-        #   IOCON_REMAP address is not mapped and write is ignored
         try:
+            # Change register map (IOCON.BANK = 1) to support/make it compatible with MCP23008
+            # - Note: when BANK is already set to 1, e.g. HA restart without power cycle,
+            #   IOCON_REMAP address is not mapped and write is ignored
             self[IOCON_REMAP] = self[IOCON_REMAP] | 0x80
+
             self._cache = {
                 "IODIR": (self[IODIRB] << 8) + self[IODIRA],
                 "GPPU": (self[GPPUB] << 8) + self[GPPUA],
@@ -289,12 +290,12 @@ class MCP23017(threading.Thread):
             raise ValueError(
                 f"I2C read failure during {self.unique_id} initialization"
             ) from error
-            
+
         self._entities = [None for i in range(16)]
         self._update_bitmap = 0
+        
         self._device_lock = threading.Lock()
         self._run = False
-
         threading.Thread.__init__(self, name=self.unique_id)
 
         _LOGGER.info("%s device created", self.unique_id)

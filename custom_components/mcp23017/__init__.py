@@ -293,7 +293,7 @@ class MCP23017(threading.Thread):
 
         self._entities = [None for i in range(16)]
         self._update_bitmap = 0
-        
+
         self._device_lock = threading.Lock()
         self._run = False
         threading.Thread.__init__(self, name=self.unique_id)

@@ -338,7 +338,7 @@ class MCP23017(threading.Thread):
                 )
                 self._i2c_fault_count = 0
         except (OSError) as error:
-            data = 0
+            data = None
             self._i2c_fault_count += 1
             if self._i2c_fault_count == 1:
                 _LOGGER.error(
@@ -353,10 +353,12 @@ class MCP23017(threading.Thread):
         """Get MCP23017 {bit} of {register}."""
         if bit < 8:
             value = self[globals()[register + "A"]] & 0xFF
-            self._cache[register] = self._cache[register] & 0xFF00 | value
+            if value:
+                self._cache[register] = self._cache[register] & 0xFF00 | value
         else:
             value = self[globals()[register + "B"]] & 0xFF
-            self._cache[register] = self._cache[register] & 0x00FF | (value << 8)
+            if value:
+                self._cache[register] = self._cache[register] & 0x00FF | (value << 8)
 
         return bool(self._cache[register] & (1 << bit))
 

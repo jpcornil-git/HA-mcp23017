@@ -277,18 +277,21 @@ class MCP23017(threading.Thread):
         # Change register map (IOCON.BANK = 1) to support/make it compatible with MCP23008
         # - Note: when BANK is already set to 1, e.g. HA restart without power cycle,
         #   IOCON_REMAP address is not mapped and write is ignored
-        self[IOCON_REMAP] = self[IOCON_REMAP] | 0x80
+        try:
+            self[IOCON_REMAP] = self[IOCON_REMAP] | 0x80
+            self._cache = {
+                "IODIR": (self[IODIRB] << 8) + self[IODIRA],
+                "GPPU": (self[GPPUB] << 8) + self[GPPUA],
+                "GPIO": (self[GPIOB] << 8) + self[GPIOA],
+                "OLAT": (self[OLATB] << 8) + self[OLATA],
+            }
+        except TypeError as error:
+            raise ValueError("I2C read failure during MCP23017 initialization")
 
-        self._device_lock = threading.Lock()
-        self._run = False
-        self._cache = {
-            "IODIR": (self[IODIRB] << 8) + self[IODIRA],
-            "GPPU": (self[GPPUB] << 8) + self[GPPUA],
-            "GPIO": (self[GPIOB] << 8) + self[GPIOA],
-            "OLAT": (self[OLATB] << 8) + self[OLATA],
-        }
         self._entities = [None for i in range(16)]
         self._update_bitmap = 0
+        self._device_lock = threading.Lock()
+        self._run = False
 
         threading.Thread.__init__(self, name=self.unique_id)
 
@@ -481,11 +484,15 @@ class MCP23017(threading.Thread):
                 if any(
                     hasattr(entity, "push_update") for entity in self._entities[0:8]
                 ):
-                    input_state = input_state & 0xFF00 | self[GPIOA]
+                    value = self[GPIOA]
+                    if value is not None:
+                        input_state = input_state & 0xFF00 | value
                 if any(
                     hasattr(entity, "push_update") for entity in self._entities[8:16]
                 ):
-                    input_state = input_state & 0x00FF | (self[GPIOB] << 8)
+                    value = self[GPIOB]
+                    if value is not None:
+                        input_state = input_state & 0x00FF | (value << 8)
 
                 # Check pin values that changed and update input cache
                 self._update_bitmap = self._update_bitmap | (

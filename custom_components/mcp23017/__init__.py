@@ -352,13 +352,13 @@ class MCP23017(threading.Thread):
     def _get_register_value(self, register, bit):
         """Get MCP23017 {bit} of {register}."""
         if bit < 8:
-            value = self[globals()[register + "A"]] & 0xFF
+            value = self[globals()[register + "A"]]
             if value:
-                self._cache[register] = self._cache[register] & 0xFF00 | value
+                self._cache[register] = self._cache[register] & 0xFF00 | value & 0xFF
         else:
-            value = self[globals()[register + "B"]] & 0xFF
+            value = self[globals()[register + "B"]]
             if value:
-                self._cache[register] = self._cache[register] & 0x00FF | (value << 8)
+                self._cache[register] = self._cache[register] & 0x00FF | (value << 8) & 0xFF
 
         return bool(self._cache[register] & (1 << bit))
 

@@ -274,22 +274,28 @@ class MCP23017(threading.Thread):
             )
             raise ValueError(error) from error
 
-        # Change register map (IOCON.BANK = 1) to support/make it compatible with MCP23008
-        # - Note: when BANK is already set to 1, e.g. HA restart without power cycle,
-        #   IOCON_REMAP address is not mapped and write is ignored
-        self[IOCON_REMAP] = self[IOCON_REMAP] | 0x80
+        try:
+            # Change register map (IOCON.BANK = 1) to support/make it compatible with MCP23008
+            # - Note: when BANK is already set to 1, e.g. HA restart without power cycle,
+            #   IOCON_REMAP address is not mapped and write is ignored
+            self[IOCON_REMAP] = self[IOCON_REMAP] | 0x80
 
-        self._device_lock = threading.Lock()
-        self._run = False
-        self._cache = {
-            "IODIR": (self[IODIRB] << 8) + self[IODIRA],
-            "GPPU": (self[GPPUB] << 8) + self[GPPUA],
-            "GPIO": (self[GPIOB] << 8) + self[GPIOA],
-            "OLAT": (self[OLATB] << 8) + self[OLATA],
-        }
+            self._cache = {
+                "IODIR": (self[IODIRB] << 8) + self[IODIRA],
+                "GPPU": (self[GPPUB] << 8) + self[GPPUA],
+                "GPIO": (self[GPIOB] << 8) + self[GPIOA],
+                "OLAT": (self[OLATB] << 8) + self[OLATA],
+            }
+        except TypeError as error:
+            raise ValueError(
+                f"I2C read failure during {self.unique_id} initialization"
+            ) from error
+
         self._entities = [None for i in range(16)]
         self._update_bitmap = 0
 
+        self._device_lock = threading.Lock()
+        self._run = False
         threading.Thread.__init__(self, name=self.unique_id)
 
         _LOGGER.info("%s device created", self.unique_id)
@@ -338,7 +344,7 @@ class MCP23017(threading.Thread):
                 )
                 self._i2c_fault_count = 0
         except (OSError) as error:
-            data = 0
+            data = None
             self._i2c_fault_count += 1
             if self._i2c_fault_count == 1:
                 _LOGGER.error(
@@ -352,11 +358,13 @@ class MCP23017(threading.Thread):
     def _get_register_value(self, register, bit):
         """Get MCP23017 {bit} of {register}."""
         if bit < 8:
-            value = self[globals()[register + "A"]] & 0xFF
-            self._cache[register] = self._cache[register] & 0xFF00 | value
+            value = self[globals()[register + "A"]]
+            if value is not None:
+                self._cache[register] = self._cache[register] & 0xFF00 | value & 0x00FF
         else:
-            value = self[globals()[register + "B"]] & 0xFF
-            self._cache[register] = self._cache[register] & 0x00FF | (value << 8)
+            value = self[globals()[register + "B"]]
+            if value is not None:
+                self._cache[register] = self._cache[register] & 0x00FF | (value << 8) & 0xFF00
 
         return bool(self._cache[register] & (1 << bit))
 
@@ -479,11 +487,15 @@ class MCP23017(threading.Thread):
                 if any(
                     hasattr(entity, "push_update") for entity in self._entities[0:8]
                 ):
-                    input_state = input_state & 0xFF00 | self[GPIOA]
+                    value = self[GPIOA]
+                    if value is not None:
+                        input_state = input_state & 0xFF00 | value
                 if any(
                     hasattr(entity, "push_update") for entity in self._entities[8:16]
                 ):
-                    input_state = input_state & 0x00FF | (self[GPIOB] << 8)
+                    value = self[GPIOB]
+                    if value is not None:
+                        input_state = input_state & 0x00FF | (value << 8)
 
                 # Check pin values that changed and update input cache
                 self._update_bitmap = self._update_bitmap | (

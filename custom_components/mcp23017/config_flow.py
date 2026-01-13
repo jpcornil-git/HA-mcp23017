@@ -27,6 +27,8 @@ from .const import (
     DOMAIN,
     MODE_DOWN,
     MODE_UP,
+    CONF_PER_PIN_DEVICE,          # ← NUEVO
+    DEFAULT_PER_PIN_DEVICE,       # ← NUEVO
 )
 
 PLATFORMS = ["binary_sensor", "switch"]
@@ -118,7 +120,6 @@ class Mcp23017ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             ),
         )
 
-
 class Mcp23017OptionsFlowHandler(config_entries.OptionsFlow):
     """MCP23017 config flow options."""
 
@@ -130,6 +131,13 @@ class Mcp23017OptionsFlowHandler(config_entries.OptionsFlow):
 
         data_schema = vol.Schema(
             {
+                vol.Optional(
+                    CONF_PER_PIN_DEVICE,
+                    default=self.config_entry.options.get(
+                        CONF_PER_PIN_DEVICE,
+                        DEFAULT_PER_PIN_DEVICE
+                    ),
+                ): bool,
                 vol.Optional(
                     CONF_INVERT_LOGIC,
                     default=self.config_entry.options.get(

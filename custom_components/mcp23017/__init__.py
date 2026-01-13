@@ -13,6 +13,7 @@ from homeassistant.core import callback
 from homeassistant.helpers import device_registry
 from homeassistant.helpers.entity_registry import async_migrate_entries
 from homeassistant.components import persistent_notification
+from homeassistant.helpers.device_registry import DeviceInfo, DeviceEntryType
 
 from .const import (
     CONF_FLOW_PIN_NUMBER,
@@ -22,6 +23,8 @@ from .const import (
     DEFAULT_I2C_BUS,
     DEFAULT_SCAN_RATE,
     DOMAIN,
+    CONF_PER_PIN_DEVICE,
+    DEFAULT_PER_PIN_DEVICE, 
 )
 
 # MCP23017 Register Map (IOCON.BANK = 1, MCP23008-compatible)
@@ -122,15 +125,26 @@ async def async_setup(hass, config):
     # hass.data[DOMAIN] stores one entry for each MCP23017 instance using i2c address as a key
     hass.data.setdefault(DOMAIN, {})
 
+    # Store global option to expose one HA device per pin (optional, backward compatible)
+    hass.data[DOMAIN].setdefault("config", {})
+    domain_conf = config.get(DOMAIN, {})
+    hass.data[DOMAIN]["config"]["per_pin_device"] = domain_conf.get(
+        CONF_PER_PIN_DEVICE, DEFAULT_PER_PIN_DEVICE
+    )
+
     # Callback function to start polling when HA starts
     def start_polling(event):
         for component in hass.data[DOMAIN].values():
+            if not hasattr(component, "is_alive"):
+                continue
             if not component.is_alive():
                 component.start_polling()
 
     # Callback function to stop polling when HA stops
     def stop_polling(event):
         for component in hass.data[DOMAIN].values():
+            if not hasattr(component, "is_alive"):
+                continue
             if component.is_alive():
                 component.stop_polling()
 
@@ -145,6 +159,27 @@ async def async_setup_entry(hass, config_entry):
 
     # Register this setup instance
     with setup_entry_status:
+        # If per_pin_device mode, ensure parent device exists in registry
+        per_pin_device = config_entry.options.get(
+            CONF_PER_PIN_DEVICE,
+            config_entry.data.get(CONF_PER_PIN_DEVICE, DEFAULT_PER_PIN_DEVICE)
+        )
+        
+        if per_pin_device:
+            i2c_address = config_entry.data[CONF_I2C_ADDRESS]
+            i2c_bus = config_entry.data[CONF_I2C_BUS]
+            
+            # Pre-create parent device to ensure it exists before child devices
+            devices = device_registry.async_get(hass)
+            parent_unique_id = f"{DOMAIN}:{i2c_bus}:0x{i2c_address:02x}"
+            devices.async_get_or_create(
+                config_entry_id=config_entry.entry_id,
+                identifiers={(DOMAIN, i2c_bus, i2c_address)},
+                manufacturer="MicroChip",
+                model="MCP23017",
+                name=parent_unique_id,
+            )
+        
         # Forward entry setup to configured platform
         await hass.config_entries.async_forward_entry_setups(
             config_entry, [config_entry.data[CONF_FLOW_PLATFORM]]
@@ -222,7 +257,7 @@ async def async_get_or_create(hass, config_entry, entity):
                     config_entry_id=config_entry.entry_id,
                     identifiers={(DOMAIN, i2c_bus, i2c_address)},
                     manufacturer="MicroChip",
-                    model=DOMAIN,
+                    model="MCP23017",
                     name=component.unique_id,
                 )
 
@@ -404,9 +439,27 @@ class MCP23017(threading.Thread):
         return f"{DOMAIN}:{self.domain_id(self.bus, self.address)}"
 
     @property
+    def device_info(self):
+        """Return device info for the MCP23017 device."""
+        return DeviceInfo(
+            identifiers={(DOMAIN, self.bus, self.address)},
+            manufacturer="Microchip",
+            model="MCP23017",
+            name=f"MCP23017 0x{self.address:02x} (bus {self.bus})",
+            entry_type=DeviceEntryType.SERVICE,
+        )
+
+    @property
     def has_no_entities(self):
         """Check if there are no more entities attached."""
         return not any(self._entities)
+
+    def get_pin_device_identifiers(self, pin):
+        """Return device identifiers for a specific pin."""
+        return (
+            DOMAIN,
+            f"{self.bus}:0x{self.address:02x}:pin:{pin}",
+        )
 
     # -- Called from HA thread pool
 

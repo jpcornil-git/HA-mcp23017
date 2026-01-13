@@ -25,7 +25,8 @@
                     "pull_mode": "Pull mode",
                     "hw_sync": "Initial value from hardware",
                     "momentary": "Momentary",
-                    "pulse_time": "Pulse time in ms"
+                    "pulse_time": "Pulse time in ms",
+                    "per_pin_device": "Individual device per pin"
                 },
                 "title": "Define Entity Properties"
             }

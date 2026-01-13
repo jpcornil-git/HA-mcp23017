@@ -8,6 +8,7 @@ import voluptuous as vol
 
 from homeassistant.components.binary_sensor import PLATFORM_SCHEMA, BinarySensorEntity
 from homeassistant.helpers.device_registry import DeviceEntryType
+from homeassistant.helpers.device_registry import DeviceInfo
 from . import async_get_or_create, setup_entry_status
 from homeassistant.config_entries import SOURCE_IMPORT
 from homeassistant.core import callback
@@ -29,6 +30,8 @@ from .const import (
     DOMAIN,
     MODE_DOWN,
     MODE_UP,
+    CONF_PER_PIN_DEVICE,
+    DEFAULT_PER_PIN_DEVICE,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -44,6 +47,7 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
         ),
         vol.Optional(CONF_I2C_ADDRESS, default=DEFAULT_I2C_ADDRESS): vol.Coerce(int),
         vol.Optional(CONF_I2C_BUS, default=DEFAULT_I2C_BUS): vol.Coerce(int),
+        vol.Optional(CONF_PER_PIN_DEVICE, default=DEFAULT_PER_PIN_DEVICE): cv.boolean,
     }
 )
 
@@ -68,6 +72,7 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
                     CONF_I2C_BUS: config[CONF_I2C_BUS],
                     CONF_INVERT_LOGIC: config[CONF_INVERT_LOGIC],
                     CONF_PULL_MODE: config[CONF_PULL_MODE],
+                    CONF_PER_PIN_DEVICE: config[CONF_PER_PIN_DEVICE],
                 },
             )
         )
@@ -120,13 +125,25 @@ class MCP23017BinarySensor(BinarySensorEntity):
             )
         )
 
+        self._per_pin_device = config_entry.options.get(
+            CONF_PER_PIN_DEVICE,
+            config_entry.data.get(
+                CONF_PER_PIN_DEVICE,
+                DEFAULT_PER_PIN_DEVICE
+            )
+        )
+
         # Create or update option values for binary_sensor platform
+        # Merge with existing options to avoid overwriting values from YAML import
+        current_options = dict(config_entry.options)
+        current_options.update({
+            CONF_INVERT_LOGIC: self._invert_logic,
+            CONF_PULL_MODE: self._pull_mode,
+            CONF_PER_PIN_DEVICE: self._per_pin_device,
+        })
         hass.config_entries.async_update_entry(
             config_entry,
-            options={
-                CONF_INVERT_LOGIC: self._invert_logic,
-                CONF_PULL_MODE: self._pull_mode,
-            },
+            options=current_options,
         )
 
         # Subscribe to updates of config entry options.
@@ -183,13 +200,22 @@ class MCP23017BinarySensor(BinarySensorEntity):
 
     @property
     def device_info(self):
-        """Device info."""
-        return {
-            "identifiers": {(DOMAIN, self._i2c_bus, self._i2c_address)},
-            "manufacturer": "Microchip",
-            "model": "MCP23017",
-            "entry_type": DeviceEntryType.SERVICE,
-        }
+        """Return device info for the entity."""
+        per_pin_device = self._per_pin_device
+
+        # Legacy mode: one device per MCP23017
+        if not per_pin_device:
+            # Use the parent MCP23017 device_info (single device for all pins)
+            return self._device.device_info
+
+        # Per-pin device mode: one device per pin
+        return DeviceInfo(
+            identifiers={self._device.get_pin_device_identifiers(self._pin_number)},
+            name=f"{self._device.unique_id} - Pin {self._pin_number}",
+            manufacturer="Microchip",
+            model="MCP23017 Pin",
+            via_device=(DOMAIN, self._i2c_bus, self._i2c_address),
+        )
 
     @property
     def device(self):
@@ -211,6 +237,10 @@ class MCP23017BinarySensor(BinarySensorEntity):
     async def async_config_update(self, hass, config_entry):
         """Handle update from config entry options."""
         self._invert_logic = config_entry.options[CONF_INVERT_LOGIC]
+        self._per_pin_device = config_entry.options.get(
+            CONF_PER_PIN_DEVICE,
+            DEFAULT_PER_PIN_DEVICE
+        )
         if self._pull_mode != config_entry.options[CONF_PULL_MODE]:
             self._pull_mode = config_entry.options[CONF_PULL_MODE]
             await hass.async_add_executor_job(

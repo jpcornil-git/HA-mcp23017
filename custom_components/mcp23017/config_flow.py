@@ -127,7 +127,21 @@ class Mcp23017OptionsFlowHandler(config_entries.OptionsFlow):
         """Manage entity options."""
 
         if user_input is not None:
-            return self.async_create_entry(title="", data=user_input)
+            # Check if per_pin_device changed
+            per_pin_device_changed = user_input.get(CONF_PER_PIN_DEVICE) != self.config_entry.options.get(
+                CONF_PER_PIN_DEVICE, DEFAULT_PER_PIN_DEVICE
+            )
+            
+            # Create the entry (save options)
+            result = self.async_create_entry(title="", data=user_input)
+            
+            # Reload if per_pin_device changed
+            if per_pin_device_changed:
+                self.hass.async_create_task(
+                    self.hass.config_entries.async_reload(self.config_entry.entry_id)
+                )
+            
+            return result
 
         data_schema = vol.Schema(
             {

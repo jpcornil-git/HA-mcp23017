@@ -11,7 +11,7 @@ import smbus2
 from homeassistant.const import EVENT_HOMEASSISTANT_START, EVENT_HOMEASSISTANT_STOP
 from homeassistant.core import callback
 from homeassistant.helpers import device_registry
-from homeassistant.helpers.entity_registry import async_migrate_entries
+from homeassistant.helpers.entity_registry import async_migrate_entries, async_get as async_get_entity_registry
 from homeassistant.components import persistent_notification
 from homeassistant.helpers.device_registry import DeviceInfo, DeviceEntryType
 
@@ -154,21 +154,47 @@ async def async_setup(hass, config):
     return True
 
 
+async def _cleanup_pin_device(hass, i2c_bus, i2c_address, pin_number):
+    """Remove per-pin device if it exists (when per_pin_device is disabled)."""
+    pin_device_identifier = (DOMAIN, f"{i2c_bus}:0x{i2c_address:02x}:pin:{pin_number}")
+    
+    # Get registries
+    dev_reg = device_registry.async_get(hass)
+    ent_reg = async_get_entity_registry(hass)
+    
+    # Find device with this identifier
+    for device in list(dev_reg.devices.values()):
+        if device.identifiers and pin_device_identifier in device.identifiers:
+            # Remove all entities for this device
+            device_entities = ent_reg.entities.get_entries_for_device_id(device.id)
+            for entity in device_entities:
+                ent_reg.async_remove(entity.entity_id)
+            
+            # Remove the device
+            dev_reg.async_remove_device(device.id)
+            break
+
+
 async def async_setup_entry(hass, config_entry):
     """Set up the MCP23017 from a config entry."""
 
     # Register this setup instance
     with setup_entry_status:
-        # If per_pin_device mode, ensure parent device exists in registry
+        i2c_address = config_entry.data[CONF_I2C_ADDRESS]
+        i2c_bus = config_entry.data[CONF_I2C_BUS]
+        pin_number = config_entry.data[CONF_FLOW_PIN_NUMBER]
+        
+        # If per_pin_device is disabled, remove orphaned per-pin devices
         per_pin_device = config_entry.options.get(
             CONF_PER_PIN_DEVICE,
             config_entry.data.get(CONF_PER_PIN_DEVICE, DEFAULT_PER_PIN_DEVICE)
         )
         
+        if not per_pin_device:
+            await _cleanup_pin_device(hass, i2c_bus, i2c_address, pin_number)
+        
+        # If per_pin_device mode, ensure parent device exists in registry
         if per_pin_device:
-            i2c_address = config_entry.data[CONF_I2C_ADDRESS]
-            i2c_bus = config_entry.data[CONF_I2C_BUS]
-            
             # Pre-create parent device to ensure it exists before child devices
             devices = device_registry.async_get(hass)
             parent_unique_id = f"{DOMAIN}:{i2c_bus}:0x{i2c_address:02x}"

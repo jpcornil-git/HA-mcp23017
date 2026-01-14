@@ -201,7 +201,7 @@ async def async_setup_entry(hass, config_entry):
             devices.async_get_or_create(
                 config_entry_id=config_entry.entry_id,
                 identifiers={(DOMAIN, i2c_bus, i2c_address)},
-                manufacturer="MicroChip",
+                manufacturer="Microchip",
                 model="MCP23017",
                 name=parent_unique_id,
             )
@@ -282,7 +282,7 @@ async def async_get_or_create(hass, config_entry, entity):
                 devices.async_get_or_create(
                     config_entry_id=config_entry.entry_id,
                     identifiers={(DOMAIN, i2c_bus, i2c_address)},
-                    manufacturer="MicroChip",
+                    manufacturer="Microchip",
                     model="MCP23017",
                     name=component.unique_id,
                 )

@@ -285,10 +285,22 @@ class MCP23017Switch(SwitchEntity):
         self._invert_logic = config_entry.options[CONF_INVERT_LOGIC]
         self._momentary = config_entry.options[CONF_MOMENTARY]
         self._pulse_time = config_entry.options[CONF_PULSE_TIME]
-        self._per_pin_device = config_entry.options.get(
+        
+        # Check if per_pin_device changed
+        new_per_pin_device = config_entry.options.get(
             CONF_PER_PIN_DEVICE,
             DEFAULT_PER_PIN_DEVICE
         )
+        
+        if new_per_pin_device != self._per_pin_device:
+            # Clean up old pin device if disabling per_pin_device mode
+            if not new_per_pin_device:
+                from . import _cleanup_pin_device
+                await _cleanup_pin_device(
+                    hass, self._i2c_bus, self._i2c_address, self._pin_number
+                )
+            self._per_pin_device = new_per_pin_device
+        
         await hass.async_add_executor_job(
             functools.partial(
                 self._device.set_pin_value,

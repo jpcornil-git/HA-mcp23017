@@ -99,11 +99,15 @@ class Mcp23017ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 user_input[CONF_FLOW_PIN_NUMBER] = int(user_input[CONF_FLOW_PIN_NUMBER])
                 if user_input[CONF_FLOW_PIN_NUMBER] < 0 or user_input[CONF_FLOW_PIN_NUMBER] > 15:
                     raise ValueError("Pin number must be between 0 and 15")
-            except (ValueError, TypeError) as e:
+            except ValueError as e:
+                error_msg = str(e)
+                # Provide friendlier message for parse errors
+                if "invalid literal" in error_msg:
+                    error_msg = "Please enter valid numeric values for I2C bus, address, and pin number"
                 return self.async_show_form(
                     step_id="user",
                     data_schema=self._get_user_schema(user_input),
-                    errors={"base": str(e)},
+                    errors={"base": error_msg},
                 )
             
             await self.async_set_unique_id(self._unique_id(user_input))

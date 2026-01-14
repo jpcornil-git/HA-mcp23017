@@ -80,6 +80,32 @@ class Mcp23017ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """Create a new entity from UI."""
 
         if user_input is not None:
+            # Validate and convert I2C bus, address, and pin number
+            try:
+                user_input[CONF_I2C_BUS] = int(user_input[CONF_I2C_BUS])
+                if user_input[CONF_I2C_BUS] < 0 or user_input[CONF_I2C_BUS] > 9:
+                    raise ValueError("I2C bus must be between 0 and 9")
+                
+                # Handle I2C address - accept both hex (0x20) and decimal (32) formats
+                addr_str = user_input[CONF_I2C_ADDRESS].strip()
+                if addr_str.lower().startswith("0x"):
+                    user_input[CONF_I2C_ADDRESS] = int(addr_str, 16)
+                else:
+                    user_input[CONF_I2C_ADDRESS] = int(addr_str)
+                
+                if user_input[CONF_I2C_ADDRESS] < 0 or user_input[CONF_I2C_ADDRESS] > 127:
+                    raise ValueError("I2C address must be between 0 (0x00) and 127 (0x7F)")
+                
+                user_input[CONF_FLOW_PIN_NUMBER] = int(user_input[CONF_FLOW_PIN_NUMBER])
+                if user_input[CONF_FLOW_PIN_NUMBER] < 0 or user_input[CONF_FLOW_PIN_NUMBER] > 15:
+                    raise ValueError("Pin number must be between 0 and 15")
+            except (ValueError, TypeError) as e:
+                return self.async_show_form(
+                    step_id="user",
+                    data_schema=self._get_user_schema(user_input),
+                    errors={"base": str(e)},
+                )
+            
             await self.async_set_unique_id(self._unique_id(user_input))
             self._abort_if_unique_id_configured()
 
@@ -100,24 +126,38 @@ class Mcp23017ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         return self.async_show_form(
             step_id="user",
-            data_schema=vol.Schema(
-                {
-                    vol.Required(
-                        CONF_I2C_BUS, default=DEFAULT_I2C_BUS
-                    ): vol.All(vol.Coerce(int), vol.Range(min=0, max=9)),
-                    vol.Required(
-                        CONF_I2C_ADDRESS, default=DEFAULT_I2C_ADDRESS
-                    ): vol.All(vol.Coerce(int), vol.Range(min=0, max=127)),
-                    vol.Required(CONF_FLOW_PIN_NUMBER, default=0): vol.All(
-                        vol.Coerce(int), vol.Range(min=0, max=15)
-                    ),
-                    vol.Required(
-                        CONF_FLOW_PLATFORM,
-                        default=PLATFORMS[0],
-                    ): vol.In(PLATFORMS),
-                    vol.Optional(CONF_FLOW_PIN_NAME): str,
-                }
-            ),
+            data_schema=self._get_user_schema(),
+        )
+
+    def _get_user_schema(self, user_input=None):
+        """Get the user input schema."""
+        if user_input is None:
+            user_input = {}
+        
+        # Format I2C address as hex if it's a number
+        i2c_addr = user_input.get(CONF_I2C_ADDRESS, DEFAULT_I2C_ADDRESS)
+        if isinstance(i2c_addr, int):
+            i2c_addr_str = f"0x{i2c_addr:02x}"
+        else:
+            i2c_addr_str = str(i2c_addr)
+        
+        return vol.Schema(
+            {
+                vol.Required(
+                    CONF_I2C_BUS, default=str(user_input.get(CONF_I2C_BUS, DEFAULT_I2C_BUS))
+                ): str,
+                vol.Required(
+                    CONF_I2C_ADDRESS, default=i2c_addr_str
+                ): str,
+                vol.Required(
+                    CONF_FLOW_PIN_NUMBER, default=str(user_input.get(CONF_FLOW_PIN_NUMBER, 0))
+                ): str,
+                vol.Required(
+                    CONF_FLOW_PLATFORM,
+                    default=user_input.get(CONF_FLOW_PLATFORM, PLATFORMS[0]),
+                ): vol.In(PLATFORMS),
+                vol.Optional(CONF_FLOW_PIN_NAME, default=user_input.get(CONF_FLOW_PIN_NAME, "")): str,
+            }
         )
 
 class Mcp23017OptionsFlowHandler(config_entries.OptionsFlow):

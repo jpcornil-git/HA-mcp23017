@@ -1,33 +1,41 @@
 {
     "config": {
-        "abort": {
-            "already_configured": "Device is already configured",
-            "cannot_create": "Unable to create MCP23017 device with specified parameters"
-        },
         "step": {
             "user": {
+                "title": "Define New Entity",
                 "data": {
-                    "i2c_bus": "I2C bus",
                     "i2c_address": "I2C address",
-                    "pin_name": "Pin name",
+                    "i2c_bus": "I2C bus",
+                    "platform": "Platform",
                     "pin_number": "Pin number",
-                    "platform": "Platform"
-                },
-                "title": "Define New Entity"
+                    "pin_name": "Pin name"
+                }
             }
+        },
+        "abort": {
+            "already_configured": "A device with the same configuration already exists",
+            "invalid_i2c_address": "Invalid I2C address or device not found"
         }
     },
     "options": {
         "step": {
             "init": {
+                "title": "Define Entity Properties",
                 "data": {
                     "invert_logic": "Invert logic",
                     "pull_mode": "Pull mode",
                     "hw_sync": "Initial value from hardware",
-                    "momentary": "Momentary",
-                    "pulse_time": "Pulse time in ms"
-                },
-                "title": "Define Entity Properties"
+                    "momentary": "Momentary switch (push button)",
+                    "pulse_time": "Pulse time (ms) if momentary"
+                }
+            }
+        }
+    },
+    "selector": {
+        "platform_type": {
+            "options": {
+                "binary_sensor": "Binary Sensor",
+                "switch": "Switch"
             }
         }
     }

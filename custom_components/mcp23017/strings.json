@@ -23,6 +23,12 @@
         "binary_sensor": "Binary Sensor",
         "switch": "Switch"
       }
+    },
+    "pull_mode": {
+      "options": {
+        "UP": "UP",
+        "NONE": "NONE"
+      }
     }
   },
   "options": {

@@ -157,7 +157,13 @@ class Mcp23017OptionsFlowHandler(config_entries.OptionsFlow):
                         default=self.config_entry.options.get(
                             CONF_PULL_MODE, DEFAULT_PULL_MODE
                         ),
-                    ): vol.In([MODE_UP, MODE_DOWN]),
+                    ): SelectSelector(
+                        SelectSelectorConfig(
+                            options=[MODE_UP, MODE_DOWN],
+                            mode=SelectSelectorMode.LIST,
+                            translation_key="pull_mode",
+                        )
+                    ),
                 }
             )
 

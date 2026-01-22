@@ -37,6 +37,12 @@
                 "binary_sensor": "Sensor Binario",
                 "switch": "Interruptor"
             }
+        },
+        "pull_mode": {
+            "options": {
+                "UP": "Arriba (UP)",
+                "NONE": "Ninguna"
+            }
         }
     }
 }

@@ -120,7 +120,7 @@ class Mcp23017ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     ): SelectSelector(
                         SelectSelectorConfig(
                             options=PLATFORMS,
-                            mode=SelectSelectorMode.DROPDOWN,
+                            mode=SelectSelectorMode.LIST,
                             translation_key="platform_type",
                         )
                     ),

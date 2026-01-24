@@ -13,6 +13,7 @@ from homeassistant.core import callback
 from homeassistant.helpers import device_registry
 from homeassistant.helpers.entity_registry import async_migrate_entries
 from homeassistant.components import persistent_notification
+from homeassistant.helpers import config_validation as cv
 
 from .const import (
     CONF_FLOW_PIN_NUMBER,
@@ -57,6 +58,8 @@ IOCON_REMAP = 0x0b
 _LOGGER = logging.getLogger(__name__)
 
 PLATFORMS = ["binary_sensor", "switch"]
+
+CONFIG_SCHEMA = cv.empty_config_schema(DOMAIN)
 
 MCP23017_DATA_LOCK = asyncio.Lock()
 

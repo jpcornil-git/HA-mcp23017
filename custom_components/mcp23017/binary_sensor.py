@@ -42,8 +42,9 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
         vol.Required(CONF_PINS): _PIN_SCHEMA,
         vol.Optional(CONF_INVERT_LOGIC, default=DEFAULT_INVERT_LOGIC): cv.boolean,
         # We need to support MODE_UP and MODE_DOWN for legacy reasons
-        vol.Optional(CONF_PULL_MODE, default=DEFAULT_PULL_MODE): vol.In(
-            [PULL_MODE_UP, PULL_MODE_NONE, MODE_UP_LEGACY, MODE_DOWN_LEGACY]
+        vol.Optional(CONF_PULL_MODE, default=DEFAULT_PULL_MODE): vol.Any(
+             vol.In([PULL_MODE_UP, PULL_MODE_NONE]),
+             vol.All(vol.Upper, vol.In([MODE_UP_LEGACY, MODE_DOWN_LEGACY]))
         ),
         vol.Optional(CONF_I2C_ADDRESS, default=DEFAULT_I2C_ADDRESS): vol.Coerce(int),
         vol.Optional(CONF_I2C_BUS, default=DEFAULT_I2C_BUS): vol.Coerce(int),
@@ -122,6 +123,12 @@ class MCP23017BinarySensor(BinarySensorEntity):
                 DEFAULT_PULL_MODE
             )
         )
+
+        # Normalize legacy values
+        if self._pull_mode == MODE_UP_LEGACY:
+            self._pull_mode = PULL_MODE_UP
+        elif self._pull_mode == MODE_DOWN_LEGACY:
+            self._pull_mode = PULL_MODE_NONE
 
         # Create or update option values for binary_sensor platform
         hass.config_entries.async_update_entry(

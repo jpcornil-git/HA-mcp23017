@@ -40,8 +40,8 @@
         },
         "pull_mode": {
             "options": {
-                "UP": "Arriba (UP)",
-                "NONE": "Ninguna"
+                "pull_mode_up": "Arriba (Pull-up)",
+                "pull_mode_none": "Ninguna"
             }
         }
     }

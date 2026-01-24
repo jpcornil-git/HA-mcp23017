@@ -30,8 +30,8 @@ from .const import (
     DEFAULT_MOMENTARY,
     DEFAULT_PULSE_TIME,
     DOMAIN,
-    MODE_DOWN,
-    MODE_UP,
+    PULL_MODE_NONE,
+    PULL_MODE_UP,
 )
 
 PLATFORMS = ["binary_sensor", "switch"]
@@ -40,7 +40,7 @@ PLATFORMS = ["binary_sensor", "switch"]
 class Mcp23017ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """MCP23017 config flow."""
 
-    VERSION = 2
+    VERSION = 3
     CONNECTION_CLASS = config_entries.CONN_CLASS_LOCAL_PUSH
 
     def _title(self, user_input):
@@ -159,7 +159,7 @@ class Mcp23017OptionsFlowHandler(config_entries.OptionsFlow):
                         ),
                     ): SelectSelector(
                         SelectSelectorConfig(
-                            options=[MODE_UP, MODE_DOWN],
+                            options=[PULL_MODE_UP, PULL_MODE_NONE],
                             mode=SelectSelectorMode.LIST,
                             translation_key="pull_mode",
                         )

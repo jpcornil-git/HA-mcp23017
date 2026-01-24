@@ -19,9 +19,12 @@ from .const import (
     CONF_FLOW_PLATFORM,
     CONF_I2C_ADDRESS,
     CONF_I2C_BUS,
+    CONF_PULL_MODE,
     DEFAULT_I2C_BUS,
     DEFAULT_SCAN_RATE,
     DOMAIN,
+    PULL_MODE_UP,
+    PULL_MODE_NONE,
 )
 
 # MCP23017 Register Map (IOCON.BANK = 1, MCP23008-compatible)
@@ -108,6 +111,26 @@ async def async_migrate_entry(hass, config_entry):
             return {"new_unique_id": entity_entry.unique_id.replace(f"{DOMAIN}-", f"{DOMAIN}:{DEFAULT_I2C_BUS}:")}
 
         await async_migrate_entries(hass, config_entry.entry_id, _update_unique_id)
+
+        _LOGGER.info("Migration to version %s successful", config_entry.version)
+        return True
+
+    if config_entry.version == 2:
+        # Migrate config_entry
+        data = {**config_entry.data}
+        options = {**config_entry.options}
+
+        if options.get(CONF_PULL_MODE) == "UP":
+            options[CONF_PULL_MODE] = PULL_MODE_UP
+        if options.get(CONF_PULL_MODE) == "NONE":
+            options[CONF_PULL_MODE] = PULL_MODE_NONE
+
+        hass.config_entries.async_update_entry(
+            config_entry,
+            version=3,
+            data=data,
+            options=options,
+        )
 
         _LOGGER.info("Migration to version %s successful", config_entry.version)
         return True

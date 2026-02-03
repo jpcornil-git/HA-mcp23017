@@ -19,9 +19,12 @@ from .const import (
     CONF_FLOW_PLATFORM,
     CONF_I2C_ADDRESS,
     CONF_I2C_BUS,
+    CONF_PULL_MODE,
     DEFAULT_I2C_BUS,
     DEFAULT_SCAN_RATE,
     DOMAIN,
+    PULL_MODE_UP,
+    PULL_MODE_NONE,
 )
 
 # MCP23017 Register Map (IOCON.BANK = 1, MCP23008-compatible)
@@ -79,14 +82,28 @@ async def async_migrate_entry(hass, config_entry):
     """Migrate old config_entry and associated entities/devices."""
     _LOGGER.info("Migrating from version %s", config_entry.version)
 
-    if config_entry.version == 1:
-        # Migrate config_entry
-        data = {**config_entry.data}
+    if config_entry.version > 3:
+        # This means the user has downgraded from a future version
+        return False
+
+    data = {**config_entry.data}
+    options = {**config_entry.options}
+
+    # Migrate from version 1: add CONF_I2C_BUS
+    if not data.get(CONF_I2C_BUS):
         data[CONF_I2C_BUS] = DEFAULT_I2C_BUS
+    # Migrate from version <= 2: update CONF_PULL_MODE values
+    pull_mode = options.get(CONF_PULL_MODE)
+    if pull_mode:
+        options[CONF_PULL_MODE] = PULL_MODE_NONE if pull_mode == "NONE" else PULL_MODE_UP
+
+    if config_entry.version == 1:
+        # Migrate config_entry including unique_id and title to include bus number
         hass.config_entries.async_update_entry(
             config_entry,
-            version=2,
+            version=3,
             data=data,
+            options=options,
             unique_id= config_entry.unique_id.replace(f"{DOMAIN}.", f"{DOMAIN}.{DEFAULT_I2C_BUS}."),
             title = f"Bus: {DEFAULT_I2C_BUS:d}, address: {config_entry.title}"
         )
@@ -112,8 +129,17 @@ async def async_migrate_entry(hass, config_entry):
         _LOGGER.info("Migration to version %s successful", config_entry.version)
         return True
 
-    _LOGGER.warning("Migration from version %s not supported", config_entry.version)
-    return False
+    else:
+        # Migrate config_entry
+        hass.config_entries.async_update_entry(
+            config_entry,
+            version=3,
+            data=data,
+            options=options,
+        )
+
+    _LOGGER.info("Migration to version %s successful", config_entry.version)
+    return True
 
 
 async def async_setup(hass, config):

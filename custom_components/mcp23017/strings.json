@@ -13,8 +13,22 @@
       }
     },
     "abort": {
-      "already_configured": "[%key:common::config_flow::abort::already_configured_device%]",
-      "cannot_create": "Unable to create MCP23017 device with specified parameters"
+      "already_configured": "A device with the same configuration already exists",
+      "invalid_i2c_address": "Invalid I2C address or device not found"
+    }
+  },
+  "selector": {
+    "platform_type": {
+      "options": {
+        "binary_sensor": "Binary Sensor",
+        "switch": "Switch"
+      }
+    },
+    "pull_mode": {
+      "options": {
+        "up": "Pull-up",
+        "none": "None"
+      }
     }
   },
   "options": {
@@ -24,7 +38,9 @@
         "data": {
           "invert_logic": "Invert logic",
           "pull_mode": "Pull mode",
-          "hw_sync": "Initial value from hardware"
+          "hw_sync": "Initial value from hardware",
+          "momentary": "Momentary switch (push button)",
+          "pulse_time": "Pulse time (ms) if momentary"
         }
       }
     }

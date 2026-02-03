@@ -4,6 +4,11 @@ import voluptuous as vol
 
 from homeassistant import config_entries
 from homeassistant.core import callback
+from homeassistant.helpers.selector import (
+    SelectSelector,
+    SelectSelectorConfig,
+    SelectSelectorMode,
+)
 
 from . import i2c_device_exist
 from .const import (
@@ -25,8 +30,8 @@ from .const import (
     DEFAULT_MOMENTARY,
     DEFAULT_PULSE_TIME,
     DOMAIN,
-    MODE_DOWN,
-    MODE_UP,
+    PULL_MODE_NONE,
+    PULL_MODE_UP,
 )
 
 PLATFORMS = ["binary_sensor", "switch"]
@@ -35,7 +40,7 @@ PLATFORMS = ["binary_sensor", "switch"]
 class Mcp23017ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """MCP23017 config flow."""
 
-    VERSION = 2
+    VERSION = 3
     CONNECTION_CLASS = config_entries.CONN_CLASS_LOCAL_PUSH
 
     def _title(self, user_input):
@@ -94,7 +99,7 @@ class Mcp23017ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     data=user_input,
                 )
             else:
-                return self.async_abort(reason="Invalid I2C address")
+                return self.async_abort(reason="invalid_i2c_address")
 
         return self.async_show_form(
             step_id="user",
@@ -112,7 +117,13 @@ class Mcp23017ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     vol.Required(
                         CONF_FLOW_PLATFORM,
                         default=PLATFORMS[0],
-                    ): vol.In(PLATFORMS),
+                    ): SelectSelector(
+                        SelectSelectorConfig(
+                            options=PLATFORMS,
+                            mode=SelectSelectorMode.LIST,
+                            translation_key="platform_type",
+                        )
+                    ),
                     vol.Optional(CONF_FLOW_PIN_NAME): str,
                 }
             ),
@@ -146,7 +157,13 @@ class Mcp23017OptionsFlowHandler(config_entries.OptionsFlow):
                         default=self.config_entry.options.get(
                             CONF_PULL_MODE, DEFAULT_PULL_MODE
                         ),
-                    ): vol.In([MODE_UP, MODE_DOWN]),
+                    ): SelectSelector(
+                        SelectSelectorConfig(
+                            options=[PULL_MODE_UP, PULL_MODE_NONE],
+                            mode=SelectSelectorMode.LIST,
+                            translation_key="pull_mode",
+                        )
+                    ),
                 }
             )
 

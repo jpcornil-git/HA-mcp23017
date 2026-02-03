@@ -13,7 +13,6 @@ from homeassistant.core import callback
 from homeassistant.helpers import device_registry
 from homeassistant.helpers.entity_registry import async_migrate_entries
 from homeassistant.components import persistent_notification
-from homeassistant.helpers import config_validation as cv
 
 from .const import (
     CONF_FLOW_PIN_NUMBER,
@@ -59,8 +58,6 @@ _LOGGER = logging.getLogger(__name__)
 
 PLATFORMS = ["binary_sensor", "switch"]
 
-CONFIG_SCHEMA = cv.empty_config_schema(DOMAIN)
-
 MCP23017_DATA_LOCK = asyncio.Lock()
 
 class SetupEntryStatus:
@@ -92,14 +89,13 @@ async def async_migrate_entry(hass, config_entry):
     data = {**config_entry.data}
     options = {**config_entry.options}
 
-    # Migrate from version 1 : add CONF_I2C_BUS
-    if not data[CONF_I2C_BUS]:
+    # Migrate from version 1: add CONF_I2C_BUS
+    if not data.get(CONF_I2C_BUS):
         data[CONF_I2C_BUS] = DEFAULT_I2C_BUS
-    # Migrate from version <= 2 : update CONF_PULL_MODE values
-    if options.get(CONF_PULL_MODE) == "UP":
-        options[CONF_PULL_MODE] = PULL_MODE_UP
-    else:
-        options[CONF_PULL_MODE] = PULL_MODE_NONE
+    # Migrate from version <= 2: update CONF_PULL_MODE values
+    pull_mode = options.get(CONF_PULL_MODE)
+    if pull_mode:
+        options[CONF_PULL_MODE] = PULL_MODE_NONE if pull_mode == "NONE" else PULL_MODE_UP
 
     if config_entry.version == 1:
         # Migrate config_entry including unique_id and title to include bus number
@@ -107,6 +103,7 @@ async def async_migrate_entry(hass, config_entry):
             config_entry,
             version=3,
             data=data,
+            options=options,
             unique_id= config_entry.unique_id.replace(f"{DOMAIN}.", f"{DOMAIN}.{DEFAULT_I2C_BUS}."),
             title = f"Bus: {DEFAULT_I2C_BUS:d}, address: {config_entry.title}"
         )

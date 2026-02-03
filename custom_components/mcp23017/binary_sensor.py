@@ -40,8 +40,8 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
         vol.Required(CONF_PINS): _PIN_SCHEMA,
         vol.Optional(CONF_INVERT_LOGIC, default=DEFAULT_INVERT_LOGIC): cv.boolean,
         # We need to support MODE_UP and MODE_DOWN for legacy reasons
-        vol.Optional(CONF_PULL_MODE, default=DEFAULT_PULL_MODE): vol.Any(
-             vol.All(vol.Lower, vol.In([PULL_MODE_UP, PULL_MODE_NONE])),
+        vol.Optional(CONF_PULL_MODE, default=DEFAULT_PULL_MODE): vol.All(
+            vol.Lower, vol.In([PULL_MODE_UP, PULL_MODE_NONE])
         ),
         vol.Optional(CONF_I2C_ADDRESS, default=DEFAULT_I2C_ADDRESS): vol.Coerce(int),
         vol.Optional(CONF_I2C_BUS, default=DEFAULT_I2C_BUS): vol.Coerce(int),

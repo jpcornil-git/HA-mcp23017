@@ -26,8 +26,8 @@
     },
     "pull_mode": {
       "options": {
-        "pull_mode_up": "Pull-up",
-        "pull_mode_none": "None"
+        "up": "Pull-up",
+        "none": "None"
       }
     }
   },

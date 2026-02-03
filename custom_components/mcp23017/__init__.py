@@ -85,13 +85,27 @@ async def async_migrate_entry(hass, config_entry):
     """Migrate old config_entry and associated entities/devices."""
     _LOGGER.info("Migrating from version %s", config_entry.version)
 
-    if config_entry.version == 1:
-        # Migrate config_entry
-        data = {**config_entry.data}
+    if config_entry.version > 3:
+        # This means the user has downgraded from a future version
+        return False
+
+    data = {**config_entry.data}
+    options = {**config_entry.options}
+
+    # Migrate from version 1 : add CONF_I2C_BUS
+    if not data[CONF_I2C_BUS]:
         data[CONF_I2C_BUS] = DEFAULT_I2C_BUS
+    # Migrate from version <= 2 : update CONF_PULL_MODE values
+    if options.get(CONF_PULL_MODE) == "UP":
+        options[CONF_PULL_MODE] = PULL_MODE_UP
+    else:
+        options[CONF_PULL_MODE] = PULL_MODE_NONE
+
+    if config_entry.version == 1:
+        # Migrate config_entry including unique_id and title to include bus number
         hass.config_entries.async_update_entry(
             config_entry,
-            version=2,
+            version=3,
             data=data,
             unique_id= config_entry.unique_id.replace(f"{DOMAIN}.", f"{DOMAIN}.{DEFAULT_I2C_BUS}."),
             title = f"Bus: {DEFAULT_I2C_BUS:d}, address: {config_entry.title}"
@@ -118,16 +132,8 @@ async def async_migrate_entry(hass, config_entry):
         _LOGGER.info("Migration to version %s successful", config_entry.version)
         return True
 
-    if config_entry.version == 2:
+    else:
         # Migrate config_entry
-        data = {**config_entry.data}
-        options = {**config_entry.options}
-
-        if options.get(CONF_PULL_MODE) == "UP":
-            options[CONF_PULL_MODE] = PULL_MODE_UP
-        if options.get(CONF_PULL_MODE) == "NONE":
-            options[CONF_PULL_MODE] = PULL_MODE_NONE
-
         hass.config_entries.async_update_entry(
             config_entry,
             version=3,
@@ -135,11 +141,8 @@ async def async_migrate_entry(hass, config_entry):
             options=options,
         )
 
-        _LOGGER.info("Migration to version %s successful", config_entry.version)
-        return True
-
-    _LOGGER.warning("Migration from version %s not supported", config_entry.version)
-    return False
+    _LOGGER.info("Migration to version %s successful", config_entry.version)
+    return True
 
 
 async def async_setup(hass, config):

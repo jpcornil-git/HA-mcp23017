@@ -29,8 +29,6 @@ from .const import (
     DOMAIN,
     PULL_MODE_UP,
     PULL_MODE_NONE,
-    MODE_UP_LEGACY,
-    MODE_DOWN_LEGACY,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -43,8 +41,7 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
         vol.Optional(CONF_INVERT_LOGIC, default=DEFAULT_INVERT_LOGIC): cv.boolean,
         # We need to support MODE_UP and MODE_DOWN for legacy reasons
         vol.Optional(CONF_PULL_MODE, default=DEFAULT_PULL_MODE): vol.Any(
-             vol.In([PULL_MODE_UP, PULL_MODE_NONE]),
-             vol.All(vol.Upper, vol.In([MODE_UP_LEGACY, MODE_DOWN_LEGACY]))
+             vol.All(vol.Lower, vol.In([PULL_MODE_UP, PULL_MODE_NONE])),
         ),
         vol.Optional(CONF_I2C_ADDRESS, default=DEFAULT_I2C_ADDRESS): vol.Coerce(int),
         vol.Optional(CONF_I2C_BUS, default=DEFAULT_I2C_BUS): vol.Coerce(int),
@@ -123,12 +120,6 @@ class MCP23017BinarySensor(BinarySensorEntity):
                 DEFAULT_PULL_MODE
             )
         )
-
-        # Normalize legacy values
-        if self._pull_mode == MODE_UP_LEGACY:
-            self._pull_mode = PULL_MODE_UP
-        elif self._pull_mode == MODE_DOWN_LEGACY:
-            self._pull_mode = PULL_MODE_NONE
 
         # Create or update option values for binary_sensor platform
         hass.config_entries.async_update_entry(
@@ -221,15 +212,8 @@ class MCP23017BinarySensor(BinarySensorEntity):
     async def async_config_update(self, hass, config_entry):
         """Handle update from config entry options."""
         self._invert_logic = config_entry.options[CONF_INVERT_LOGIC]
-        
-        new_pull_mode = config_entry.options[CONF_PULL_MODE]
-        if new_pull_mode == MODE_UP_LEGACY:
-            new_pull_mode = PULL_MODE_UP
-        elif new_pull_mode == MODE_DOWN_LEGACY:
-            new_pull_mode = PULL_MODE_NONE
-
-        if self._pull_mode != new_pull_mode:
-            self._pull_mode = new_pull_mode
+        if self._pull_mode != config_entry.options[CONF_PULL_MODE]:
+            self._pull_mode = config_entry.options[CONF_PULL_MODE]
             await hass.async_add_executor_job(
                 functools.partial(
                     self._device.set_pullup,

@@ -1,8 +1,8 @@
 """Constants for MCP23017 integration."""
 DOMAIN = "mcp23017"
 
-PULL_MODE_UP = "pull_mode_up"
-PULL_MODE_NONE = "pull_mode_none"
+PULL_MODE_UP = "up"
+PULL_MODE_NONE = "none"
 
 CONF_I2C_ADDRESS = "i2c_address"
 CONF_I2C_BUS = "i2c_bus"
@@ -29,6 +29,3 @@ DEFAULT_HW_SYNC = True
 
 DEFAULT_MOMENTARY = False
 DEFAULT_PULSE_TIME = 200
-
-MODE_UP_LEGACY = "UP"
-MODE_DOWN_LEGACY = "NONE"

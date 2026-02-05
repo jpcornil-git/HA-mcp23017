@@ -1,0 +1,48 @@
+{
+    "config": {
+        "step": {
+            "user": {
+                "title": "Définir une nouvelle entité",
+                "data": {
+                    "i2c_address": "Adresse I2C",
+                    "i2c_bus": "Bus I2C",
+                    "platform": "Direction de la broche",
+                    "pin_number": "Numéro de broche",
+                    "pin_name": "Nom de la broche"
+                }
+            }
+        },
+        "abort": {
+            "already_configured": "Un appareil avec la même configuration existe déjà",
+            "invalid_i2c_address": "Adresse I2C non valide ou appareil non trouvé"
+        }
+    },
+    "options": {
+        "step": {
+            "init": {
+                "title": "Définir les propriétés de l'entité",
+                "data": {
+                    "invert_logic": "Inverser la logique",
+                    "pull_mode": "Résistance de rappel",
+                    "hw_sync": "Valeur initiale depuis le composant",
+                    "momentary": "Sortie temporisée",
+                    "pulse_time": "Temporisation (ms)"
+                }
+            }
+        }
+    },
+    "selector": {
+        "platform_type": {
+            "options": {
+                "binary_sensor": "Entrée",
+                "switch": "Sortie"
+            }
+        },
+        "pull_mode": {
+            "options": {
+                "up": "Activée",
+                "none": "Aucune"
+            }
+        }
+    }
+}

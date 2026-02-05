@@ -6,7 +6,7 @@
                 "data": {
                     "i2c_address": "I2C address",
                     "i2c_bus": "I2C bus",
-                    "platform": "Platform",
+                    "platform": "Pin direction",
                     "pin_number": "Pin number",
                     "pin_name": "Pin name"
                 }
@@ -23,10 +23,10 @@
                 "title": "Define Entity Properties",
                 "data": {
                     "invert_logic": "Invert logic",
-                    "pull_mode": "Pull mode",
+                    "pull_mode": "Pull-up resistor",
                     "hw_sync": "Initial value from hardware",
-                    "momentary": "Momentary switch (push button)",
-                    "pulse_time": "Pulse time (ms) if momentary"
+                    "momentary": "Pulsed output",
+                    "pulse_time": "Pulse time (ms)"
                 }
             }
         }
@@ -34,13 +34,13 @@
     "selector": {
         "platform_type": {
             "options": {
-                "binary_sensor": "Binary Sensor",
-                "switch": "Switch"
+                "binary_sensor": "Input",
+                "switch": "Output"
             }
         },
         "pull_mode": {
             "options": {
-                "up": "Pull-up",
+                "up": "Enabled",
                 "none": "None"
             }
         }

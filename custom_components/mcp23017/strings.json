@@ -6,7 +6,7 @@
                 "data": {
                     "i2c_address": "I2C address",
                     "i2c_bus": "I2C bus",
-                    "platform": "Pin direction",
+                    "platform": "Platform",
                     "pin_number": "Pin number",
                     "pin_name": "Pin name"
                 }
@@ -34,14 +34,14 @@
     "selector": {
         "platform_type": {
             "options": {
-                "binary_sensor": "Input",
-                "switch": "Output"
+                "binary_sensor": "binary_sensor",
+                "switch": "switch"
             }
         },
         "pull_mode": {
             "options": {
                 "up": "Enabled",
-                "none": "None"
+                "none": "Disabled"
             }
         }
     }

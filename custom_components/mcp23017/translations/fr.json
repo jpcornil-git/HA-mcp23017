@@ -6,7 +6,7 @@
                 "data": {
                     "i2c_address": "Adresse I2C",
                     "i2c_bus": "Bus I2C",
-                    "platform": "Direction de la broche",
+                    "platform": "Platforme",
                     "pin_number": "Numéro de broche",
                     "pin_name": "Nom de la broche"
                 }
@@ -34,14 +34,14 @@
     "selector": {
         "platform_type": {
             "options": {
-                "binary_sensor": "Entrée",
-                "switch": "Sortie"
+                "binary_sensor": "binary_sensor",
+                "switch": "switch"
             }
         },
         "pull_mode": {
             "options": {
                 "up": "Activée",
-                "none": "Aucune"
+                "none": "Désactivée"
             }
         }
     }

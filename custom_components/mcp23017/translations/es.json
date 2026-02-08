@@ -23,10 +23,10 @@
                 "title": "Propiedades de la entidad",
                 "data": {
                     "invert_logic": "Invertir lógica",
-                    "pull_mode": "Modo de resistencia (Pull mode)",
+                    "pull_mode": "Resistencia Pull-up",
                     "hw_sync": "Sincronizar valor inicial desde hardware",
-                    "momentary": "Interruptor momentáneo (pulsador)",
-                    "pulse_time": "Tiempo de pulso (ms) para momentáneo"
+                    "momentary": "Salida pulsada",
+                    "pulse_time": "Tiempo de pulso (ms)"
                 }
             }
         }
@@ -34,14 +34,14 @@
     "selector": {
         "platform_type": {
             "options": {
-                "binary_sensor": "Sensor Binario",
-                "switch": "Interruptor"
+                "binary_sensor": "binary_sensor",
+                "switch": "switch"
             }
         },
         "pull_mode": {
             "options": {
-                "up": "Arriba (Pull-up)",
-                "none": "Ninguna"
+                "up": "Activada",
+                "none": "Desactivada"
             }
         }
     }

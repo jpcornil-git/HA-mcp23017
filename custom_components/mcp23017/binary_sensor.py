@@ -165,7 +165,7 @@ class MCP23017BinarySensor(BinarySensorEntity):
     @property
     def is_on(self):
         """Return the state of the entity."""
-        return self._state != self._invert_logic
+        return None if self._state is None else self._state != self._invert_logic
 
     @property
     def pin(self):

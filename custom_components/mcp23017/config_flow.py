@@ -41,7 +41,6 @@ class Mcp23017ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """MCP23017 config flow."""
 
     VERSION = 3
-    CONNECTION_CLASS = config_entries.CONN_CLASS_LOCAL_PUSH
 
     def _title(self, user_input):
         return "Bus: %d, address: 0x%02x, pin: %d ('%s':%s)" % (

@@ -82,6 +82,8 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     )
 
     if await hass.async_add_executor_job(switch_entity.configure_device):
+        # Subscribe to updates of config entry options.
+        switch_entity.subscribe_update_listener(config_entry)
         async_add_entities([switch_entity])
 
 
@@ -98,6 +100,7 @@ class MCP23017Switch(SwitchEntity):
         self._device = None
         self._state = None
         self._turn_off_timer_cancel = None
+        self._unsubscribe_update_listener = None
 
         self._i2c_address = config_entry.data[CONF_I2C_ADDRESS]
         self._i2c_bus = config_entry.data[CONF_I2C_BUS]
@@ -145,11 +148,6 @@ class MCP23017Switch(SwitchEntity):
                 CONF_MOMENTARY: self._momentary,
                 CONF_PULSE_TIME: self._pulse_time,
             },
-        )
-
-        # Subscribe to updates of config entry options
-        self._unsubscribe_update_listener = config_entry.add_update_listener(
-            self.async_config_update
         )
 
         _LOGGER.info(
@@ -267,9 +265,17 @@ class MCP23017Switch(SwitchEntity):
         )
         self.async_schedule_update_ha_state()
 
+    def subscribe_update_listener(self, config_entry):
+        """Subscribe to updates of config entry options."""
+        self._unsubscribe_update_listener = config_entry.add_update_listener(
+            self.async_config_update
+        )
+
     def unsubscribe_update_listener(self):
         """Remove listener from config entry options."""
-        self._unsubscribe_update_listener()
+        if self._unsubscribe_update_listener:
+            self._unsubscribe_update_listener()
+            self._unsubscribe_update_listener = None
 
     # Sync functions executed outside of hass async loop.
 

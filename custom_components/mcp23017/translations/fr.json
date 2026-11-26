@@ -44,5 +44,10 @@
                 "none": "Désactivée"
             }
         }
+    },
+    "exceptions": {
+        "cannot_access": {
+            "message": "Impossible d'accéder au composant {id}. Nouvelle tentative en cours."
+        }
     }
 }

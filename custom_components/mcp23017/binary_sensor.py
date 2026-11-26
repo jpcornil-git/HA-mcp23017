@@ -83,6 +83,8 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     )
 
     if await hass.async_add_executor_job(binary_sensor_entity.configure_device):
+        # Subscribe to updates of config entry options.
+        binary_sensor_entity.subscribe_update_listener(config_entry)
         async_add_entities([binary_sensor_entity])
 
 
@@ -98,6 +100,7 @@ class MCP23017BinarySensor(BinarySensorEntity):
         """Initialize the MCP23017 binary sensor."""
         self._state = None
         self._device = None
+        self._unsubscribe_update_listener = None
 
         self._i2c_address = config_entry.data[CONF_I2C_ADDRESS]
         self._i2c_bus = config_entry.data[CONF_I2C_BUS]
@@ -128,11 +131,6 @@ class MCP23017BinarySensor(BinarySensorEntity):
                 CONF_INVERT_LOGIC: self._invert_logic,
                 CONF_PULL_MODE: self._pull_mode,
             },
-        )
-
-        # Subscribe to updates of config entry options.
-        self._unsubscribe_update_listener = config_entry.add_update_listener(
-            self.async_config_update
         )
 
         _LOGGER.info(
@@ -223,9 +221,17 @@ class MCP23017BinarySensor(BinarySensorEntity):
             )
         self.async_schedule_update_ha_state()
 
+    def subscribe_update_listener(self, config_entry):
+        """Subscribe to updates of config entry options."""
+        self._unsubscribe_update_listener = config_entry.add_update_listener(
+            self.async_config_update
+        )
+
     def unsubscribe_update_listener(self):
         """Remove listener from config entry options."""
-        self._unsubscribe_update_listener()
+        if self._unsubscribe_update_listener:
+            self._unsubscribe_update_listener()
+            self._unsubscribe_update_listener = None
 
     # Sync functions executed outside of the hass async loop
 

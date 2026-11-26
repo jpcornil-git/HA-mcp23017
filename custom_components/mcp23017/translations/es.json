@@ -44,5 +44,10 @@
                 "none": "Desactivada"
             }
         }
+    },
+    "exceptions": {
+        "cannot_access": {
+            "message": "No es posible acceder al componente {id}. Se está realizando un nuevo intento."
+        }
     }
 }

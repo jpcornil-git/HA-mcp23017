@@ -12,7 +12,7 @@ from homeassistant.const import EVENT_HOMEASSISTANT_START, EVENT_HOMEASSISTANT_S
 from homeassistant.core import callback
 from homeassistant.helpers import device_registry
 from homeassistant.helpers.entity_registry import async_migrate_entries
-from homeassistant.components import persistent_notification
+from homeassistant.exceptions import ConfigEntryNotReady
 
 from .const import (
     CONF_FLOW_PIN_NUMBER,
@@ -258,23 +258,20 @@ async def async_get_or_create(hass, config_entry, entity):
             )
 
     except ValueError as error:
-        component = None
-        await hass.config_entries.async_remove(config_entry.entry_id)
-
-        persistent_notification.create(
-            hass,
-            f"Error: Unable to access {DOMAIN}:{domain_id} ({error})",
-            title=f"{DOMAIN} Configuration",
-            notification_id=f"{DOMAIN} notification",
-        )
+        raise ConfigEntryNotReady(
+            translation_domain=DOMAIN,
+            translation_key="cannot_access",
+            translation_placeholders={"id": domain_id},
+        ) from error
 
     return component
 
 
 def i2c_device_exist(bus, address):
     try:
-        smbus2.SMBus(bus).read_byte(address)
-    except (FileNotFoundError, OSError) as error:
+        with smbus2.SMBus(bus) as i2c_bus:
+            i2c_bus.read_byte(address)
+    except (FileNotFoundError, OSError):
         return False
     return True
 
@@ -287,12 +284,15 @@ class MCP23017(threading.Thread):
         self._address = address
         self._busNumber = bus
         self._i2c_fault_count = 0
+        self._bus = None
 
         # Check device presence
         try:
             self._bus = smbus2.SMBus(self._busNumber)
             self._bus.read_byte(self._address)
         except (FileNotFoundError, OSError) as error:
+            if self._bus is not None:
+                self._bus.close()
             _LOGGER.error(
                 "Unable to access %s (%s)",
                 self.unique_id,
@@ -313,6 +313,7 @@ class MCP23017(threading.Thread):
                 "OLAT": (self[OLATB] << 8) + self[OLATA],
             }
         except TypeError as error:
+            self._bus.close()
             raise ValueError(
                 f"I2C read failure during {self.unique_id} initialization"
             ) from error

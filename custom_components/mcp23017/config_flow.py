@@ -92,7 +92,11 @@ class Mcp23017ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     user_input[CONF_FLOW_PIN_NUMBER],
                 )
 
-            if i2c_device_exist(user_input[CONF_I2C_BUS], user_input[CONF_I2C_ADDRESS]):
+            if await self.hass.async_add_executor_job(
+                    i2c_device_exist,
+                    user_input[CONF_I2C_BUS],
+                    user_input[CONF_I2C_ADDRESS],
+            ):
                 return self.async_create_entry(
                     title=self._title(user_input),
                     data=user_input,

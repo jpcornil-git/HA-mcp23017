@@ -12,7 +12,7 @@ from homeassistant.const import EVENT_HOMEASSISTANT_START, EVENT_HOMEASSISTANT_S
 from homeassistant.core import callback
 from homeassistant.helpers import device_registry
 from homeassistant.helpers.entity_registry import async_migrate_entries
-from homeassistant.components import persistent_notification
+from homeassistant.exceptions import ConfigEntryNotReady
 
 from .const import (
     CONF_FLOW_PIN_NUMBER,
@@ -258,15 +258,11 @@ async def async_get_or_create(hass, config_entry, entity):
             )
 
     except ValueError as error:
-        component = None
-        await hass.config_entries.async_remove(config_entry.entry_id)
-
-        persistent_notification.create(
-            hass,
-            f"Error: Unable to access {DOMAIN}:{domain_id} ({error})",
-            title=f"{DOMAIN} Configuration",
-            notification_id=f"{DOMAIN} notification",
-        )
+        raise ConfigEntryNotReady(
+            translation_domain=DOMAIN,
+            translation_key="cannot_access",
+            translation_placeholders={"id": domain_id},
+        ) from error
 
     return component
 

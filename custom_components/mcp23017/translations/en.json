@@ -44,5 +44,10 @@
                 "none": "Disabled"
             }
         }
+    },
+    "exceptions": {
+        "cannot_access": {
+            "message": "Unable to access component {id}. Retrying."
+        }
     }
 }
